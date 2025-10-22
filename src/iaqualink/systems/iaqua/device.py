@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, cast
 from iaqualink.device import (
     AqualinkBinarySensor,
     AqualinkDevice,
+    AqualinkHeatPump,
     AqualinkLight,
     AqualinkSensor,
     AqualinkSwitch,
@@ -75,12 +76,16 @@ class IaquaDevice(AqualinkDevice):
     def from_data(cls, system: IaquaSystem, data: DeviceData) -> IaquaDevice:
         class_: type[IaquaDevice]
 
+        # Handle special device types first
+        if data["name"] == "heatpump_info":
+            class_ = IaquaHeatPump
+        elif data["name"] == "icl_light" or "zoneId" in data:
+            class_ = IaquaICLLight
         # I don't have a system where these fields get populated.
         # No idea what they are and what to do with them.
-        if isinstance(data["state"], dict | list):
+        elif isinstance(data["state"], dict | list):
             raise AqualinkDeviceNotSupported(data)
-
-        if data["name"].endswith("_heater") or data["name"].endswith("_pump"):
+        elif data["name"].endswith("_heater") or data["name"].endswith("_pump"):
             class_ = IaquaSwitch
         elif data["name"].endswith("_set_point"):
             if data["state"] == "":
@@ -471,3 +476,190 @@ class IaquaThermostat(IaquaSwitch, AqualinkThermostat):
     async def turn_off(self) -> None:
         if self._heater.is_on is True:
             await self._heater.turn_off()
+
+
+class IaquaICLLight(IaquaDevice, AqualinkLight):
+    """Intelligent Color Light (ICL) with RGB color support."""
+
+    @property
+    def zone_id(self) -> int:
+        """Zone ID for the ICL light."""
+        return self.data.get("zoneId", 1)
+
+    @property
+    def zone_name(self) -> str:
+        """Zone name for the ICL light."""
+        return self.data.get("zoneName", "Pool lights")
+
+    @property
+    def is_on(self) -> bool:
+        status = self.data.get("zoneStatus", "off")
+        return status != "off"
+
+    @property
+    def brightness(self) -> int | None:
+        dim_level = self.data.get("dim_level")
+        return int(dim_level) if dim_level else None
+
+    @property
+    def rgb_color(self) -> tuple[int, int, int] | None:
+        """RGB color values from the custom color info."""
+        try:
+            red = int(self.data.get("red_val", 0))
+            green = int(self.data.get("green_val", 0))
+            blue = int(self.data.get("blue_val", 0))
+            return (red, green, blue)
+        except (ValueError, TypeError):
+            return None
+
+    @property
+    def white_value(self) -> int | None:
+        """White value for RGBW support."""
+        try:
+            return int(self.data.get("white_val", 0))
+        except (ValueError, TypeError):
+            return None
+
+    @property
+    def effect(self) -> str | None:
+        """Current color effect."""
+        return self.data.get("zoneColor", "off")
+
+    async def turn_on(self) -> None:
+        if not self.is_on:
+            data = {"zoneId": self.zone_id, "zoneStatus": "on"}
+            await self.system.set_icl_light(data)
+
+    async def turn_off(self) -> None:
+        if self.is_on:
+            data = {"zoneId": self.zone_id, "zoneStatus": "off"}
+            await self.system.set_icl_light(data)
+
+    async def set_brightness(self, brightness: int) -> None:
+        if not 0 <= brightness <= 100:
+            msg = f"{brightness}% isn't a valid brightness level (0-100)."
+            raise AqualinkInvalidParameterException(msg)
+
+        data = {"zoneId": self.zone_id, "dim_level": str(brightness)}
+        await self.system.set_icl_light(data)
+
+    async def set_rgb_color(self, red: int, green: int, blue: int) -> None:
+        if not all(0 <= val <= 255 for val in [red, green, blue]):
+            msg = "RGB values must be between 0 and 255."
+            raise AqualinkInvalidParameterException(msg)
+
+        data = {
+            "zoneId": self.zone_id,
+            "red_val": str(red),
+            "green_val": str(green),
+            "blue_val": str(blue),
+        }
+        if self.white_value is not None:
+            data["white_val"] = str(self.white_value)
+        
+        await self.system.set_icl_light(data)
+
+    async def set_white_value(self, white: int) -> None:
+        if not 0 <= white <= 255:
+            msg = "White value must be between 0 and 255."
+            raise AqualinkInvalidParameterException(msg)
+
+        data = {"zoneId": self.zone_id, "white_val": str(white)}
+        await self.system.set_icl_light(data)
+
+
+class IaquaHeatPump(IaquaDevice, AqualinkHeatPump):
+    """Heat pump device with heating and cooling support."""
+
+    @property
+    def is_present(self) -> bool:
+        """Whether the heat pump is present in the system."""
+        return self.data.get("isheatpumpPresent", False)
+
+    @property
+    def is_on(self) -> bool:
+        status = self.data.get("heatpumpstatus", "off")
+        return status != "off"
+
+    @property
+    def mode(self) -> str | None:
+        """Current heat pump mode (heat, cool, off)."""
+        return self.data.get("heatpumpmode", "off")
+
+    @property
+    def supports_cooling(self) -> bool:
+        """Whether the heat pump supports cooling/chilling mode."""
+        return self.data.get("isChillAvailable", False)
+
+    @property
+    def heat_pump_type(self) -> str | None:
+        """Type of heat pump (2-wire, 4-wire, etc.)."""
+        return self.data.get("heatpumptype")
+
+    async def turn_on(self) -> None:
+        if not self.is_on:
+            await self.set_mode("heat")
+
+    async def turn_off(self) -> None:
+        if self.is_on:
+            await self.set_mode("off")
+
+    async def set_mode(self, mode: str) -> None:
+        valid_modes = ["off", "heat"]
+        if self.supports_cooling:
+            valid_modes.append("cool")
+
+        if mode not in valid_modes:
+            msg = f"{mode} isn't a valid mode. Valid modes: {valid_modes}"
+            raise AqualinkInvalidParameterException(msg)
+
+        data = {"heatpumpmode": mode}
+        await self.system.set_heatpump(data)
+
+    # Thermostat properties - delegate to pool thermostat
+    @property
+    def unit(self) -> str:
+        return self.system.temp_unit
+
+    @property
+    def current_temperature(self) -> str:
+        pool_temp_device = self.system.devices.get("pool_temp")
+        return pool_temp_device.state if pool_temp_device else ""
+
+    @property
+    def target_temperature(self) -> str:
+        pool_set_point = self.system.devices.get("pool_set_point")
+        if self.mode == "cool":
+            pool_chill_set_point = self.system.devices.get("pool_chill_set_point")
+            return pool_chill_set_point.state if pool_chill_set_point else ""
+        return pool_set_point.state if pool_set_point else ""
+
+    @property
+    def min_temperature(self) -> int:
+        if self.unit == "F":
+            return IAQUA_TEMP_FAHRENHEIT_LOW
+        return IAQUA_TEMP_CELSIUS_LOW
+
+    @property
+    def max_temperature(self) -> int:
+        if self.unit == "F":
+            return IAQUA_TEMP_FAHRENHEIT_HIGH
+        return IAQUA_TEMP_CELSIUS_HIGH
+
+    async def set_temperature(self, temperature: int) -> None:
+        unit = self.unit
+        low = self.min_temperature
+        high = self.max_temperature
+
+        if temperature not in range(low, high + 1):
+            msg = f"{temperature}{unit} isn't a valid temperature ({low}-{high}{unit})."
+            raise AqualinkInvalidParameterException(msg)
+
+        # Determine which setpoint to update based on mode
+        if self.mode == "cool" and self.supports_cooling:
+            data = {"temp_chill": str(temperature)}
+        else:
+            # For heat mode, use the pool setpoint
+            data = {"temp2": str(temperature)}  # Pool is temp2 when spa is present
+            
+        await self.system.set_temps(data)
