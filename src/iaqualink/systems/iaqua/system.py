@@ -169,6 +169,7 @@ class IaquaSystem(AqualinkSystem):
 
         # Make the data a bit flatter.
         devices = {}
+        LOGGER.debug(f"Starting _parse_devices_response, current self.devices keys: {list(self.devices.keys())}")
         for x in data["devices_screen"][3:]:
             aux = next(iter(x.keys()))
             if aux == "icl_info_list":
@@ -180,13 +181,14 @@ class IaquaSystem(AqualinkSystem):
                         if isinstance(icl_info, dict):
                             zone_id = icl_info.get("zoneId", 1)
                             device_name = f"icl_zone_{zone_id}"
-                            LOGGER.debug(f"Processing ICL zone {zone_id}, device_name={device_name}")
+                            LOGGER.debug(f"Processing ICL zone {zone_id}, device_name={device_name}, exists={device_name in self.devices}")
                             # Merge with existing zone data from home response
                             if device_name in self.devices:
                                 # Update existing device data
                                 LOGGER.debug(f"Updating existing ICL device {device_name} with {icl_info}")
                                 for dk, dv in icl_info.items():
                                     self.devices[device_name].data[dk] = dv
+                                LOGGER.debug(f"After update, device data: {self.devices[device_name].data}")
                             else:
                                 # Create new device
                                 LOGGER.debug(f"Creating new ICL device {device_name}")
@@ -235,7 +237,12 @@ class IaquaSystem(AqualinkSystem):
 
     async def set_light(self, data: Payload) -> None:
         r = await self._send_session_request(IAQUA_COMMAND_SET_LIGHT, data)
-        self._parse_devices_response(r)
+        # ICL lights return home_screen, regular lights return devices_screen
+        response_data = r.json()
+        if "home_screen" in response_data:
+            self._parse_home_response(r)
+        else:
+            self._parse_devices_response(r)
 
     async def set_icl_light(self, data: Payload) -> None:
         LOGGER.debug(f"Setting ICL light with data: {data}")
