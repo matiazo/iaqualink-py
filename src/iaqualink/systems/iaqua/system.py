@@ -141,8 +141,12 @@ class IaquaSystem(AqualinkSystem):
                 state["name"] = name
                 devices[name] = state
                 continue
-            elif name == "swc_info":
-                # Skip SWC for now, can be added later
+            elif name == "swc_info" and isinstance(state, dict):
+                # Handle salt water chlorinator info
+                # Only create device if actually present
+                if state.get("isswcPresent", False):
+                    state["name"] = name
+                    devices[name] = state
                 continue
             
             attrs = {"name": name, "state": state}
@@ -167,33 +171,39 @@ class IaquaSystem(AqualinkSystem):
             LOGGER.warning(f"Status for system {self.serial} is Offline.")
             raise AqualinkSystemOfflineException
 
+        # Handle ICL info list if present (at root level of devices_screen)
+        if "icl_info_list" in data:
+            icl_list = data["icl_info_list"]
+            LOGGER.debug(f"Found icl_info_list at root level: {icl_list}")
+            if isinstance(icl_list, list):
+                for icl_info in icl_list:
+                    if isinstance(icl_info, dict):
+                        zone_id = icl_info.get("zoneId", 1)
+                        device_name = f"icl_zone_{zone_id}"
+                        LOGGER.debug(f"Processing ICL zone {zone_id}, device_name={device_name}, exists={device_name in self.devices}")
+                        # Merge with existing zone data from home response
+                        if device_name in self.devices:
+                            # Update existing device data
+                            LOGGER.debug(f"Updating existing ICL device {device_name} with {icl_info}")
+                            for dk, dv in icl_info.items():
+                                self.devices[device_name].data[dk] = dv
+                            LOGGER.debug(f"After update, device data: {self.devices[device_name].data}")
+                        else:
+                            # Create new device (shouldn't happen, but handle it)
+                            LOGGER.debug(f"Creating new ICL device {device_name}")
+                            icl_info["name"] = device_name
+                            try:
+                                self.devices[device_name] = IaquaDevice.from_data(self, icl_info)
+                            except AqualinkDeviceNotSupported as e:
+                                LOGGER.debug("ICL device found was ignored: %s", e)
+
         # Make the data a bit flatter.
         devices = {}
-        LOGGER.debug(f"Starting _parse_devices_response, current self.devices keys: {list(self.devices.keys())}")
+        LOGGER.debug(f"Starting aux device processing, current self.devices keys: {list(self.devices.keys())}")
         for x in data["devices_screen"][3:]:
             aux = next(iter(x.keys()))
+            # Skip icl_info_list if it appears here (it shouldn't, but just in case)
             if aux == "icl_info_list":
-                # Handle ICL info list
-                icl_list = next(iter(x.values()))
-                LOGGER.debug(f"Found icl_info_list: {icl_list}")
-                if isinstance(icl_list, list):
-                    for icl_info in icl_list:
-                        if isinstance(icl_info, dict):
-                            zone_id = icl_info.get("zoneId", 1)
-                            device_name = f"icl_zone_{zone_id}"
-                            LOGGER.debug(f"Processing ICL zone {zone_id}, device_name={device_name}, exists={device_name in self.devices}")
-                            # Merge with existing zone data from home response
-                            if device_name in self.devices:
-                                # Update existing device data
-                                LOGGER.debug(f"Updating existing ICL device {device_name} with {icl_info}")
-                                for dk, dv in icl_info.items():
-                                    self.devices[device_name].data[dk] = dv
-                                LOGGER.debug(f"After update, device data: {self.devices[device_name].data}")
-                            else:
-                                # Create new device
-                                LOGGER.debug(f"Creating new ICL device {device_name}")
-                                icl_info["name"] = device_name
-                                devices[device_name] = icl_info
                 continue
             
             attrs = {"aux": aux.replace("aux_", ""), "name": aux}

@@ -78,6 +78,8 @@ class IaquaDevice(AqualinkDevice):
         # Handle special device types first
         if data["name"] == "heatpump_info":
             class_ = IaquaHeatPump
+        elif data["name"] == "swc_info":
+            class_ = IaquaSaltWaterChlorinator
         elif data["name"] == "icl_light" or "zoneId" in data:
             class_ = IaquaICLLight
         # I don't have a system where these fields get populated.
@@ -653,3 +655,46 @@ class IaquaHeatPump(IaquaSwitch):
 
         data = {"heatpumpmode": mode}
         await self.system.set_heatpump(data)
+
+
+class IaquaSaltWaterChlorinator(IaquaSensor):
+    """Represents an iAqua Salt Water Chlorinator (SWC) device."""
+
+    @classmethod
+    def from_data(cls, system: IaquaSystem, data: DeviceData) -> IaquaDevice:
+        return cls(system, data)
+
+    @property
+    def name(self) -> str:
+        return self.data.get("name", "swc_info")
+
+    @property
+    def label(self) -> str:
+        return "Salt Water Chlorinator"
+
+    @property
+    def state(self) -> str:
+        """Return 'present' or 'absent' based on installation status."""
+        is_present = self.data.get("isswcPresent", False)
+        return "present" if is_present else "absent"
+
+    @property
+    def is_present(self) -> bool:
+        """Whether the SWC is physically present/installed."""
+        return self.data.get("isswcPresent", False)
+
+    # Future properties when you install the device:
+    # @property
+    # def chlorine_level(self) -> int | None:
+    #     """Current chlorine production percentage (0-100)."""
+    #     return self.data.get("chlorineLevel")
+    #
+    # @property
+    # def salt_level(self) -> int | None:
+    #     """Current salt level in PPM."""
+    #     return self.data.get("saltLevel")
+    #
+    # @property
+    # def cell_status(self) -> str | None:
+    #     """Salt cell status/health."""
+    #     return self.data.get("cellStatus")
