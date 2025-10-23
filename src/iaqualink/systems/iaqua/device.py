@@ -540,9 +540,10 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
     async def turn_on(self) -> None:
         if not self.is_on:
             LOGGER.debug(f"Turning on ICL light zone {self.zone_id}")
-            data = {"zoneId": self.zone_id, "zoneStatus": "on"}
+            # ICL uses set_light with zoneId parameter
+            data = {"zoneId": str(self.zone_id), "light": "1"}
             try:
-                await self.system.set_icl_light(data)
+                await self.system.set_light(data)
             except Exception as e:
                 LOGGER.error(f"Failed to turn on ICL light: {e}", exc_info=True)
                 raise
@@ -550,9 +551,10 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
     async def turn_off(self) -> None:
         if self.is_on:
             LOGGER.debug(f"Turning off ICL light zone {self.zone_id}")
-            data = {"zoneId": self.zone_id, "zoneStatus": "off"}
+            # ICL uses set_light with zoneId parameter
+            data = {"zoneId": str(self.zone_id), "light": "0"}
             try:
-                await self.system.set_icl_light(data)
+                await self.system.set_light(data)
             except Exception as e:
                 LOGGER.error(f"Failed to turn off ICL light: {e}", exc_info=True)
                 raise
@@ -562,8 +564,8 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
             msg = f"{brightness}% isn't a valid brightness level (0-100)."
             raise AqualinkInvalidParameterException(msg)
 
-        data = {"zoneId": self.zone_id, "dim_level": str(brightness)}
-        await self.system.set_icl_light(data)
+        data = {"zoneId": str(self.zone_id), "dim_level": str(brightness)}
+        await self.system.set_light(data)
 
     async def set_rgb_color(self, red: int, green: int, blue: int) -> None:
         if not all(0 <= val <= 255 for val in [red, green, blue]):
@@ -571,7 +573,7 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
             raise AqualinkInvalidParameterException(msg)
 
         data = {
-            "zoneId": self.zone_id,
+            "zoneId": str(self.zone_id),
             "red_val": str(red),
             "green_val": str(green),
             "blue_val": str(blue),
@@ -579,15 +581,15 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
         if self.white_value is not None:
             data["white_val"] = str(self.white_value)
         
-        await self.system.set_icl_light(data)
+        await self.system.set_light(data)
 
     async def set_white_value(self, white: int) -> None:
         if not 0 <= white <= 255:
             msg = "White value must be between 0 and 255."
             raise AqualinkInvalidParameterException(msg)
 
-        data = {"zoneId": self.zone_id, "white_val": str(white)}
-        await self.system.set_icl_light(data)
+        data = {"zoneId": str(self.zone_id), "white_val": str(white)}
+        await self.system.set_light(data)
 
 
 class IaquaHeatPump(IaquaSwitch):

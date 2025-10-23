@@ -239,9 +239,20 @@ class IaquaSystem(AqualinkSystem):
 
     async def set_icl_light(self, data: Payload) -> None:
         LOGGER.debug(f"Setting ICL light with data: {data}")
-        r = await self._send_session_request(IAQUA_COMMAND_SET_ICL_LIGHT, data)
-        LOGGER.debug(f"ICL light response: {r.status_code}")
-        self._parse_home_response(r)
+        # Try different command formats for ICL
+        zone_id = data.get("zoneId", "1")
+        
+        # Maybe the command includes the zone? Like "set_light_1" or "set_icl_1"
+        # Or maybe it's just "set_light" with zone parameter
+        # Let's try the standard set_light command with zone info
+        try:
+            r = await self._send_session_request(IAQUA_COMMAND_SET_LIGHT, data)
+            LOGGER.debug(f"ICL light response: {r.status_code}")
+            self._parse_home_response(r)
+            self._parse_devices_response(r)
+        except Exception as e:
+            LOGGER.error(f"ICL light command failed: {e}")
+            raise
 
     async def set_heatpump(self, data: Payload) -> None:
         r = await self._send_session_request(IAQUA_COMMAND_SET_HEATPUMP, data)
