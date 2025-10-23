@@ -27,6 +27,8 @@ IAQUA_COMMAND_GET_ONETOUCH = "get_onetouch"
 
 IAQUA_COMMAND_SET_AUX = "set_aux"
 IAQUA_COMMAND_SET_LIGHT = "set_light"
+IAQUA_COMMAND_SET_ICL_LIGHT = "set_icl_light"
+IAQUA_COMMAND_SET_HEATPUMP = "set_heatpump"
 IAQUA_COMMAND_SET_POOL_HEATER = "set_pool_heater"
 IAQUA_COMMAND_SET_POOL_PUMP = "set_pool_pump"
 IAQUA_COMMAND_SET_SOLAR_HEATER = "set_solar_heater"
@@ -119,6 +121,30 @@ class IaquaSystem(AqualinkSystem):
         for x in data["home_screen"][4:]:
             name = next(iter(x.keys()))
             state = next(iter(x.values()))
+            
+            # Handle special device types that were previously ignored
+            if name == "icl_custom_color_info" and isinstance(state, list):
+                # Handle ICL custom color info
+                for color_info in state:
+                    if isinstance(color_info, dict):
+                        zone_id = color_info.get("zoneId", 1)
+                        device_name = f"icl_zone_{zone_id}"
+                        # Merge with existing zone data if present
+                        if device_name in devices:
+                            devices[device_name].update(color_info)
+                        else:
+                            color_info["name"] = device_name
+                            devices[device_name] = color_info
+                continue
+            elif name == "heatpump_info" and isinstance(state, dict):
+                # Handle heat pump info
+                state["name"] = name
+                devices[name] = state
+                continue
+            elif name == "swc_info":
+                # Skip SWC for now, can be added later
+                continue
+            
             attrs = {"name": name, "state": state}
             devices.update({name: attrs})
 
@@ -145,6 +171,25 @@ class IaquaSystem(AqualinkSystem):
         devices = {}
         for x in data["devices_screen"][3:]:
             aux = next(iter(x.keys()))
+            if aux == "icl_info_list":
+                # Handle ICL info list
+                icl_list = next(iter(x.values()))
+                if isinstance(icl_list, list):
+                    for icl_info in icl_list:
+                        if isinstance(icl_info, dict):
+                            zone_id = icl_info.get("zoneId", 1)
+                            device_name = f"icl_zone_{zone_id}"
+                            # Merge with existing zone data from home response
+                            if device_name in self.devices:
+                                # Update existing device data
+                                for dk, dv in icl_info.items():
+                                    self.devices[device_name].data[dk] = dv
+                            else:
+                                # Create new device
+                                icl_info["name"] = device_name
+                                devices[device_name] = icl_info
+                continue
+            
             attrs = {"aux": aux.replace("aux_", ""), "name": aux}
             for y in next(iter(x.values())):
                 attrs.update(y)
@@ -187,3 +232,11 @@ class IaquaSystem(AqualinkSystem):
     async def set_light(self, data: Payload) -> None:
         r = await self._send_session_request(IAQUA_COMMAND_SET_LIGHT, data)
         self._parse_devices_response(r)
+
+    async def set_icl_light(self, data: Payload) -> None:
+        r = await self._send_session_request(IAQUA_COMMAND_SET_ICL_LIGHT, data)
+        self._parse_home_response(r)
+
+    async def set_heatpump(self, data: Payload) -> None:
+        r = await self._send_session_request(IAQUA_COMMAND_SET_HEATPUMP, data)
+        self._parse_home_response(r)

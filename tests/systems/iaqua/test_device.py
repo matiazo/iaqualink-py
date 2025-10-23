@@ -4,6 +4,10 @@ import copy
 from typing import cast
 from unittest.mock import patch
 
+import pytest
+import respx
+import respx.router
+
 from iaqualink.systems.iaqua.device import (
     IAQUA_TEMP_CELSIUS_HIGH,
     IAQUA_TEMP_CELSIUS_LOW,
@@ -14,6 +18,8 @@ from iaqualink.systems.iaqua.device import (
     IaquaColorLight,
     IaquaDevice,
     IaquaDimmableLight,
+    IaquaHeatPump,
+    IaquaICLLight,
     IaquaLightSwitch,
     IaquaSensor,
     IaquaSwitch,
@@ -21,6 +27,7 @@ from iaqualink.systems.iaqua.device import (
 )
 from iaqualink.systems.iaqua.system import IaquaSystem
 
+from ...base import dotstar, resp_200
 from ...base_test_device import (
     TestBaseBinarySensor,
     TestBaseDevice,
@@ -457,3 +464,522 @@ class TestIaquaThermostat(TestIaquaDevice, TestBaseThermostat):
 
     async def test_temp_name_no_spa(self) -> None:
         assert self.pool_set_point._temperature == "temp1"
+
+
+class TestIaquaICLLight(TestBaseLight):
+    def setUp(self) -> None:
+        super().setUp()
+
+        data = {"serial_number": "SN123456", "device_type": "iaqua"}
+        self.system = IaquaSystem(self.client, data=data)
+
+        # ICL light data based on the example payload
+        data = {
+            "name": "icl_zone_1",
+            "zoneId": 1,
+            "zoneName": "Pool lights",
+            "zoneStatus": "on",
+            "zoneColor": "0",
+            "zoneColorVal": "off",
+            "dim_level": "75",
+            "red_val": "128",
+            "green_val": "64",
+            "blue_val": "192",
+            "white_val": "32",
+        }
+        self.sut = IaquaICLLight(self.system, data)
+        self.sut_class = IaquaICLLight
+
+    def test_equal(self) -> None:
+        assert self.sut == self.sut
+
+    def test_not_equal(self) -> None:
+        obj2 = copy.deepcopy(self.sut)
+        obj2.data["zoneId"] = 2
+        assert self.sut != obj2
+
+    def test_not_equal_different_type(self) -> None:
+        data = {"name": "pool_pump", "state": "1"}
+        obj2 = IaquaSwitch(self.system, data)
+        assert self.sut != obj2
+
+    def test_property_zone_id(self) -> None:
+        assert self.sut.zone_id == 1
+
+    def test_property_zone_name(self) -> None:
+        assert self.sut.zone_name == "Pool lights"
+
+    def test_property_name(self) -> None:
+        assert self.sut.name == "icl_zone_1"
+
+    def test_property_label(self) -> None:
+        assert self.sut.label == "Icl Zone 1"
+
+    def test_property_state(self) -> None:
+        assert self.sut.data["zoneStatus"] == "on"
+
+    def test_property_manufacturer(self) -> None:
+        assert self.sut.manufacturer == "Jandy"
+
+    def test_property_model(self) -> None:
+        assert self.sut.model == "ICLLight"
+
+    def test_property_is_on_true(self) -> None:
+        assert self.sut.is_on is True
+
+    def test_property_is_on_false(self) -> None:
+        self.sut.data["zoneStatus"] = "off"
+        assert self.sut.is_on is False
+
+    def test_property_brightness(self) -> None:
+        assert self.sut.brightness == 75
+
+    def test_property_brightness_none(self) -> None:
+        self.sut.data["dim_level"] = None
+        assert self.sut.brightness is None
+
+    def test_property_rgb_color(self) -> None:
+        assert self.sut.rgb_color == (128, 64, 192)
+
+    def test_property_rgb_color_invalid(self) -> None:
+        self.sut.data["red_val"] = "invalid"
+        assert self.sut.rgb_color is None
+
+    def test_property_white_value(self) -> None:
+        assert self.sut.white_value == 32
+
+    def test_property_white_value_none(self) -> None:
+        self.sut.data["white_val"] = None
+        assert self.sut.white_value is None
+
+    def test_property_effect(self) -> None:
+        assert self.sut.effect == "0"
+
+    def test_property_supports_brightness(self) -> None:
+        assert self.sut.supports_brightness is True
+
+    def test_property_supports_rgb_color(self) -> None:
+        assert self.sut.supports_rgb_color is True
+
+    def test_property_supports_white_value(self) -> None:
+        assert self.sut.supports_white_value is True
+
+    # Override base test methods that don't apply to ICL lights
+    def test_property_supported_effects(self) -> None:
+        pytest.skip("ICL lights use RGB color, not effect presets")
+
+    @respx.mock
+    async def test_set_brightness_75(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        # Override to add proper mocking
+        respx_mock.route(dotstar).mock(resp_200)
+        with patch.object(self.sut.system, "_parse_home_response"):
+            await self.sut.set_brightness(75)
+        assert len(respx_mock.calls) > 0
+
+    @respx.mock
+    async def test_set_brightness_invalid_89(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        # Override to add proper mocking
+        pytest.skip("ICL lights accept any 0-100 brightness value")
+
+    @respx.mock
+    async def test_set_effect_by_id_4(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        pytest.skip("ICL lights use RGB color, not effect IDs")
+
+    @respx.mock
+    async def test_set_effect_by_id_invalid_27(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        pytest.skip("ICL lights use RGB color, not effect IDs")
+
+    @respx.mock
+    async def test_set_effect_by_name_invalid_amaranth(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        pytest.skip("ICL lights use RGB color, not effect names")
+
+    @respx.mock
+    async def test_set_effect_by_name_off(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        pytest.skip("ICL lights use RGB color, not effect names")
+
+    @respx.mock
+    async def test_turn_on(self, respx_mock: respx.router.MockRouter) -> None:
+        self.sut.data["zoneStatus"] = "off"
+        respx_mock.route(dotstar).mock(resp_200)
+        with patch.object(self.sut.system, "_parse_home_response"):
+            await self.sut.turn_on()
+        assert len(respx_mock.calls) == 1
+        url = str(respx_mock.calls[0].request.url)
+        assert "set_icl_light" in url
+        assert "zoneId=1" in url
+        assert "zoneStatus=on" in url
+
+    @respx.mock
+    async def test_turn_on_noop(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        # Already on
+        self.sut.data["zoneStatus"] = "on"
+        respx_mock.route(dotstar).mock(resp_200)
+        await self.sut.turn_on()
+        assert len(respx_mock.calls) == 0
+
+    @respx.mock
+    async def test_turn_off(self, respx_mock: respx.router.MockRouter) -> None:
+        self.sut.data["zoneStatus"] = "on"
+        respx_mock.route(dotstar).mock(resp_200)
+        with patch.object(self.sut.system, "_parse_home_response"):
+            await self.sut.turn_off()
+        assert len(respx_mock.calls) == 1
+        url = str(respx_mock.calls[0].request.url)
+        assert "set_icl_light" in url
+        assert "zoneId=1" in url
+        assert "zoneStatus=off" in url
+
+    @respx.mock
+    async def test_turn_off_noop(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        # Already off
+        self.sut.data["zoneStatus"] = "off"
+        respx_mock.route(dotstar).mock(resp_200)
+        await self.sut.turn_off()
+        assert len(respx_mock.calls) == 0
+
+    @respx.mock
+    async def test_set_brightness(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        respx_mock.route(dotstar).mock(resp_200)
+        with patch.object(self.sut.system, "_parse_home_response"):
+            await self.sut.set_brightness(50)
+        assert len(respx_mock.calls) == 1
+        url = str(respx_mock.calls[0].request.url)
+        assert "set_icl_light" in url
+        assert "zoneId=1" in url
+        assert "dim_level=50" in url
+
+    @respx.mock
+    async def test_set_brightness_invalid(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        respx_mock.route(dotstar).mock(resp_200)
+        with pytest.raises(Exception):
+            await self.sut.set_brightness(150)  # Invalid > 100
+        assert len(respx_mock.calls) == 0
+
+    @respx.mock
+    async def test_set_rgb_color(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        respx_mock.route(dotstar).mock(resp_200)
+        with patch.object(self.sut.system, "_parse_home_response"):
+            await self.sut.set_rgb_color(255, 128, 64)
+        assert len(respx_mock.calls) == 1
+        url = str(respx_mock.calls[0].request.url)
+        assert "set_icl_light" in url
+        assert "zoneId=1" in url
+        assert "red_val=255" in url
+        assert "green_val=128" in url
+        assert "blue_val=64" in url
+
+    @respx.mock
+    async def test_set_rgb_color_invalid(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        respx_mock.route(dotstar).mock(resp_200)
+        with pytest.raises(Exception):
+            await self.sut.set_rgb_color(300, 128, 64)  # Invalid > 255
+        assert len(respx_mock.calls) == 0
+
+    @respx.mock
+    async def test_set_white_value(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        respx_mock.route(dotstar).mock(resp_200)
+        with patch.object(self.sut.system, "_parse_home_response"):
+            await self.sut.set_white_value(200)
+        assert len(respx_mock.calls) == 1
+        url = str(respx_mock.calls[0].request.url)
+        assert "set_icl_light" in url
+        assert "zoneId=1" in url
+        assert "white_val=200" in url
+
+    @respx.mock
+    async def test_set_white_value_invalid(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        respx_mock.route(dotstar).mock(resp_200)
+        with pytest.raises(Exception):
+            await self.sut.set_white_value(300)  # Invalid > 255
+        assert len(respx_mock.calls) == 0
+
+
+class TestIaquaHeatPump(TestBaseThermostat):
+    def setUp(self) -> None:
+        super().setUp()
+
+        data = {"serial_number": "SN123456", "device_type": "iaqua"}
+        self.system = IaquaSystem(self.client, data=data)
+        self.system.temp_unit = "F"
+
+        # Create mock pool temperature and setpoint devices
+        pool_temp_data = {"name": "pool_temp", "state": "78"}
+        self.pool_temp = IaquaSensor(self.system, pool_temp_data)
+
+        pool_set_point_data = {"name": "pool_set_point", "state": "80"}
+        self.pool_set_point = IaquaThermostat(self.system, pool_set_point_data)
+
+        pool_chill_data = {"name": "pool_chill_set_point", "state": "95"}
+        self.pool_chill = IaquaThermostat(self.system, pool_chill_data)
+
+        self.system.devices = {
+            "pool_temp": self.pool_temp,
+            "pool_set_point": self.pool_set_point,
+            "pool_chill_set_point": self.pool_chill,
+        }
+
+        # Heat pump data based on the example payload
+        data = {
+            "name": "heatpump_info",
+            "isheatpumpPresent": True,
+            "heatpumpstatus": "on",
+            "isChillAvailable": True,
+            "heatpumpmode": "heat",
+            "heatpumptype": "4-wired",
+        }
+        self.sut = IaquaHeatPump(self.system, data)
+        self.sut_class = IaquaHeatPump
+
+    def test_equal(self) -> None:
+        assert self.sut == self.sut
+
+    def test_not_equal(self) -> None:
+        obj2 = copy.deepcopy(self.sut)
+        obj2.data["heatpumptype"] = "2-wired"
+        assert self.sut != obj2
+
+    def test_not_equal_different_type(self) -> None:
+        data = {"name": "pool_pump", "state": "1"}
+        obj2 = IaquaSwitch(self.system, data)
+        assert self.sut != obj2
+
+    def test_property_name(self) -> None:
+        assert self.sut.name == "heatpump_info"
+
+    def test_property_label(self) -> None:
+        assert self.sut.label == "Heatpump Info"
+
+    def test_property_manufacturer(self) -> None:
+        assert self.sut.manufacturer == "Jandy"
+
+    def test_property_model(self) -> None:
+        assert self.sut.model == "HeatPump"
+
+    def test_property_is_present(self) -> None:
+        assert self.sut.is_present is True
+
+    def test_property_is_present_false(self) -> None:
+        self.sut.data["isheatpumpPresent"] = False
+        assert self.sut.is_present is False
+
+    def test_property_is_on_true(self) -> None:
+        self.sut.data["heatpumpstatus"] = "on"
+        assert self.sut.is_on is True
+
+    def test_property_is_on_false(self) -> None:
+        self.sut.data["heatpumpstatus"] = "off"
+        assert self.sut.is_on is False
+
+    def test_property_mode(self) -> None:
+        assert self.sut.mode == "heat"
+
+    def test_property_mode_cool(self) -> None:
+        self.sut.data["heatpumpmode"] = "cool"
+        assert self.sut.mode == "cool"
+
+    def test_property_supports_cooling(self) -> None:
+        assert self.sut.supports_cooling is True
+
+    def test_property_supports_cooling_false(self) -> None:
+        self.sut.data["isChillAvailable"] = False
+        assert self.sut.supports_cooling is False
+
+    def test_property_heat_pump_type(self) -> None:
+        assert self.sut.heat_pump_type == "4-wired"
+
+    def test_property_unit(self) -> None:
+        assert self.sut.unit == "F"
+
+    def test_property_current_temperature(self) -> None:
+        assert self.sut.current_temperature == "78"
+
+    def test_property_target_temperature_heat_mode(self) -> None:
+        self.sut.data["heatpumpmode"] = "heat"
+        assert self.sut.target_temperature == "80"
+
+    def test_property_target_temperature_cool_mode(self) -> None:
+        self.sut.data["heatpumpmode"] = "cool"
+        assert self.sut.target_temperature == "95"
+
+    def test_property_min_temperature_f(self) -> None:
+        self.system.temp_unit = "F"
+        assert self.sut.min_temperature == IAQUA_TEMP_FAHRENHEIT_LOW
+
+    def test_property_min_temperature_c(self) -> None:
+        self.system.temp_unit = "C"
+        assert self.sut.min_temperature == IAQUA_TEMP_CELSIUS_LOW
+
+    def test_property_max_temperature_f(self) -> None:
+        self.system.temp_unit = "F"
+        assert self.sut.max_temperature == IAQUA_TEMP_FAHRENHEIT_HIGH
+
+    def test_property_max_temperature_c(self) -> None:
+        self.system.temp_unit = "C"
+        assert self.sut.max_temperature == IAQUA_TEMP_CELSIUS_HIGH
+
+    # Override base test that doesn't apply to heat pump data structure
+    def test_property_state(self) -> None:
+        # Heat pump uses heatpumpstatus instead of state
+        assert "heatpumpstatus" in self.sut.data
+
+    @respx.mock
+    async def test_set_temperature_86f(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        # Override to add proper mocking
+        respx_mock.route(dotstar).mock(resp_200)
+        with patch.object(self.sut.system, "_parse_home_response"):
+            await self.sut.set_temperature(86)
+        assert len(respx_mock.calls) > 0
+
+    @respx.mock
+    async def test_set_temperature_30c(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        # Override to add proper mocking
+        self.system.temp_unit = "C"
+        respx_mock.route(dotstar).mock(resp_200)
+        with patch.object(self.sut.system, "_parse_home_response"):
+            await self.sut.set_temperature(30)
+        assert len(respx_mock.calls) > 0
+
+    @respx.mock
+    async def test_turn_on(self, respx_mock: respx.router.MockRouter) -> None:
+        self.sut.data["heatpumpstatus"] = "off"
+        respx_mock.route(dotstar).mock(resp_200)
+        with patch.object(self.sut.system, "_parse_home_response"):
+            await self.sut.turn_on()
+        assert len(respx_mock.calls) == 1
+        url = str(respx_mock.calls[0].request.url)
+        assert "set_heatpump" in url
+        assert "heatpumpmode=heat" in url
+
+    @respx.mock
+    async def test_turn_on_noop(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        # Already on
+        self.sut.data["heatpumpstatus"] = "on"
+        respx_mock.route(dotstar).mock(resp_200)
+        await self.sut.turn_on()
+        assert len(respx_mock.calls) == 0
+
+    @respx.mock
+    async def test_turn_off(self, respx_mock: respx.router.MockRouter) -> None:
+        self.sut.data["heatpumpstatus"] = "on"
+        respx_mock.route(dotstar).mock(resp_200)
+        with patch.object(self.sut.system, "_parse_home_response"):
+            await self.sut.turn_off()
+        assert len(respx_mock.calls) == 1
+        url = str(respx_mock.calls[0].request.url)
+        assert "set_heatpump" in url
+        assert "heatpumpmode=off" in url
+
+    @respx.mock
+    async def test_turn_off_noop(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        # Already off
+        self.sut.data["heatpumpstatus"] = "off"
+        respx_mock.route(dotstar).mock(resp_200)
+        await self.sut.turn_off()
+        assert len(respx_mock.calls) == 0
+
+    @respx.mock
+    async def test_set_mode_heat(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        respx_mock.route(dotstar).mock(resp_200)
+        with patch.object(self.sut.system, "_parse_home_response"):
+            await self.sut.set_mode("heat")
+        assert len(respx_mock.calls) == 1
+        url = str(respx_mock.calls[0].request.url)
+        assert "set_heatpump" in url
+        assert "heatpumpmode=heat" in url
+
+    @respx.mock
+    async def test_set_mode_cool(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        respx_mock.route(dotstar).mock(resp_200)
+        with patch.object(self.sut.system, "_parse_home_response"):
+            await self.sut.set_mode("cool")
+        assert len(respx_mock.calls) == 1
+        url = str(respx_mock.calls[0].request.url)
+        assert "set_heatpump" in url
+        assert "heatpumpmode=cool" in url
+
+    @respx.mock
+    async def test_set_mode_off(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        respx_mock.route(dotstar).mock(resp_200)
+        with patch.object(self.sut.system, "_parse_home_response"):
+            await self.sut.set_mode("off")
+        assert len(respx_mock.calls) == 1
+        url = str(respx_mock.calls[0].request.url)
+        assert "set_heatpump" in url
+        assert "heatpumpmode=off" in url
+
+    @respx.mock
+    async def test_set_mode_invalid(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        respx_mock.route(dotstar).mock(resp_200)
+        with pytest.raises(Exception):
+            await self.sut.set_mode("invalid_mode")
+        assert len(respx_mock.calls) == 0
+
+    @respx.mock
+    async def test_set_temperature_heat_mode(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        self.sut.data["heatpumpmode"] = "heat"
+        respx_mock.route(dotstar).mock(resp_200)
+        with patch.object(self.sut.system, "_parse_home_response"):
+            await self.sut.set_temperature(85)
+        assert len(respx_mock.calls) == 1
+        url = str(respx_mock.calls[0].request.url)
+        assert "set_temps" in url
+        assert "temp2=85" in url
+
+    @respx.mock
+    async def test_set_temperature_cool_mode(
+        self, respx_mock: respx.router.MockRouter
+    ) -> None:
+        self.sut.data["heatpumpmode"] = "cool"
+        respx_mock.route(dotstar).mock(resp_200)
+        with patch.object(self.sut.system, "_parse_home_response"):
+            await self.sut.set_temperature(90)
+        assert len(respx_mock.calls) == 1
+        url = str(respx_mock.calls[0].request.url)
+        assert "set_temps" in url
+        assert "temp_chill=90" in url

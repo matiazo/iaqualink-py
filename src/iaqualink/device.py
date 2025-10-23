@@ -109,6 +109,34 @@ class AqualinkLight(AqualinkSwitch, AqualinkDevice):
             raise NotImplementedError
         raise AqualinkOperationNotSupportedException
 
+    @property
+    def rgb_color(self) -> tuple[int, int, int] | None:
+        """RGB color values as (red, green, blue) tuple."""
+        return None
+
+    @property
+    def supports_rgb_color(self) -> bool:
+        return self.rgb_color is not None
+
+    async def set_rgb_color(self, red: int, green: int, blue: int) -> None:
+        if self.supports_rgb_color is True:
+            raise NotImplementedError
+        raise AqualinkOperationNotSupportedException
+
+    @property
+    def white_value(self) -> int | None:
+        """White value for RGBW lights."""
+        return None
+
+    @property
+    def supports_white_value(self) -> bool:
+        return self.white_value is not None
+
+    async def set_white_value(self, white: int) -> None:
+        if self.supports_white_value is True:
+            raise NotImplementedError
+        raise AqualinkOperationNotSupportedException
+
 
 class AqualinkThermostat(AqualinkSwitch, AqualinkDevice):
     @property
@@ -133,3 +161,24 @@ class AqualinkThermostat(AqualinkSwitch, AqualinkDevice):
 
     async def set_temperature(self, _: int) -> None:
         raise NotImplementedError
+
+
+class AqualinkHeatPump(AqualinkThermostat, AqualinkDevice):
+    @property
+    def mode(self) -> str | None:
+        """Current heat pump mode (heat, cool, off)."""
+        return None
+
+    @property
+    def supports_cooling(self) -> bool:
+        """Whether the heat pump supports cooling/chilling mode."""
+        return False
+
+    async def set_mode(self, mode: str) -> None:
+        """Set heat pump mode (heat, cool, off)."""
+        raise NotImplementedError
+
+    @property
+    def heat_pump_type(self) -> str | None:
+        """Type of heat pump (2-wire, 4-wire, etc.)."""
+        return None
