@@ -174,18 +174,22 @@ class IaquaSystem(AqualinkSystem):
             if aux == "icl_info_list":
                 # Handle ICL info list
                 icl_list = next(iter(x.values()))
+                LOGGER.debug(f"Found icl_info_list: {icl_list}")
                 if isinstance(icl_list, list):
                     for icl_info in icl_list:
                         if isinstance(icl_info, dict):
                             zone_id = icl_info.get("zoneId", 1)
                             device_name = f"icl_zone_{zone_id}"
+                            LOGGER.debug(f"Processing ICL zone {zone_id}, device_name={device_name}")
                             # Merge with existing zone data from home response
                             if device_name in self.devices:
                                 # Update existing device data
+                                LOGGER.debug(f"Updating existing ICL device {device_name} with {icl_info}")
                                 for dk, dv in icl_info.items():
                                     self.devices[device_name].data[dk] = dv
                             else:
                                 # Create new device
+                                LOGGER.debug(f"Creating new ICL device {device_name}")
                                 icl_info["name"] = device_name
                                 devices[device_name] = icl_info
                 continue
@@ -234,7 +238,9 @@ class IaquaSystem(AqualinkSystem):
         self._parse_devices_response(r)
 
     async def set_icl_light(self, data: Payload) -> None:
+        LOGGER.debug(f"Setting ICL light with data: {data}")
         r = await self._send_session_request(IAQUA_COMMAND_SET_ICL_LIGHT, data)
+        LOGGER.debug(f"ICL light response: {r.status_code}")
         self._parse_home_response(r)
 
     async def set_heatpump(self, data: Payload) -> None:

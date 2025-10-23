@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, cast
 from iaqualink.device import (
     AqualinkBinarySensor,
     AqualinkDevice,
-    AqualinkHeatPump,
     AqualinkLight,
     AqualinkSensor,
     AqualinkSwitch,
@@ -493,7 +492,11 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
 
     @property
     def is_on(self) -> bool:
-        status = self.data.get("zoneStatus", "off")
+        status = self.data.get("zoneStatus")
+        if status is None:
+            # Fallback: if we don't have status yet, assume off
+            LOGGER.warning(f"ICL zone {self.zone_id} missing zoneStatus field, assuming off")
+            return False
         return status != "off"
 
     @property
@@ -536,13 +539,23 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
 
     async def turn_on(self) -> None:
         if not self.is_on:
+            LOGGER.debug(f"Turning on ICL light zone {self.zone_id}")
             data = {"zoneId": self.zone_id, "zoneStatus": "on"}
-            await self.system.set_icl_light(data)
+            try:
+                await self.system.set_icl_light(data)
+            except Exception as e:
+                LOGGER.error(f"Failed to turn on ICL light: {e}", exc_info=True)
+                raise
 
     async def turn_off(self) -> None:
         if self.is_on:
+            LOGGER.debug(f"Turning off ICL light zone {self.zone_id}")
             data = {"zoneId": self.zone_id, "zoneStatus": "off"}
-            await self.system.set_icl_light(data)
+            try:
+                await self.system.set_icl_light(data)
+            except Exception as e:
+                LOGGER.error(f"Failed to turn off ICL light: {e}", exc_info=True)
+                raise
 
     async def set_brightness(self, brightness: int) -> None:
         if not 0 <= brightness <= 100:
@@ -577,8 +590,13 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
         await self.system.set_icl_light(data)
 
 
-class IaquaHeatPump(IaquaDevice, AqualinkHeatPump):
-    """Heat pump device with heating and cooling support."""
+class IaquaHeatPump(IaquaSwitch):
+    """Heat pump device with heating and cooling mode selection.
+    
+    The heat pump is essentially a switch with mode options (heat/cool/off).
+    It doesn't have its own temperature settings - those are controlled by
+    the pool thermostat (pool_set_point for heat, pool_chill_set_point for cool).
+    """
 
     @property
     def is_present(self) -> bool:
@@ -587,11 +605,12 @@ class IaquaHeatPump(IaquaDevice, AqualinkHeatPump):
 
     @property
     def is_on(self) -> bool:
+        """Heat pump is on if mode is not 'off'."""
         status = self.data.get("heatpumpstatus", "off")
         return status != "off"
 
     @property
-    def mode(self) -> str | None:
+    def mode(self) -> str:
         """Current heat pump mode (heat, cool, off)."""
         return self.data.get("heatpumpmode", "off")
 
@@ -607,18 +626,21 @@ class IaquaHeatPump(IaquaDevice, AqualinkHeatPump):
 
     @property
     def state(self) -> str:
-        """State of the heat pump."""
-        return self.data.get("heatpumpstatus", "off")
+        """State returns the current mode (heat, cool, off)."""
+        return self.data.get("heatpumpmode", "off")
 
     async def turn_on(self) -> None:
+        """Turn on heat pump in heat mode."""
         if not self.is_on:
             await self.set_mode("heat")
 
     async def turn_off(self) -> None:
+        """Turn off heat pump."""
         if self.is_on:
             await self.set_mode("off")
 
     async def set_mode(self, mode: str) -> None:
+        """Set heat pump mode (heat, cool, off)."""
         valid_modes = ["off", "heat"]
         if self.supports_cooling:
             valid_modes.append("cool")
@@ -629,51 +651,3 @@ class IaquaHeatPump(IaquaDevice, AqualinkHeatPump):
 
         data = {"heatpumpmode": mode}
         await self.system.set_heatpump(data)
-
-    # Thermostat properties - delegate to pool thermostat
-    @property
-    def unit(self) -> str:
-        return self.system.temp_unit
-
-    @property
-    def current_temperature(self) -> str:
-        pool_temp_device = self.system.devices.get("pool_temp")
-        return pool_temp_device.state if pool_temp_device else ""
-
-    @property
-    def target_temperature(self) -> str:
-        pool_set_point = self.system.devices.get("pool_set_point")
-        if self.mode == "cool":
-            pool_chill_set_point = self.system.devices.get("pool_chill_set_point")
-            return pool_chill_set_point.state if pool_chill_set_point else ""
-        return pool_set_point.state if pool_set_point else ""
-
-    @property
-    def min_temperature(self) -> int:
-        if self.unit == "F":
-            return IAQUA_TEMP_FAHRENHEIT_LOW
-        return IAQUA_TEMP_CELSIUS_LOW
-
-    @property
-    def max_temperature(self) -> int:
-        if self.unit == "F":
-            return IAQUA_TEMP_FAHRENHEIT_HIGH
-        return IAQUA_TEMP_CELSIUS_HIGH
-
-    async def set_temperature(self, temperature: int) -> None:
-        unit = self.unit
-        low = self.min_temperature
-        high = self.max_temperature
-
-        if temperature not in range(low, high + 1):
-            msg = f"{temperature}{unit} isn't a valid temperature ({low}-{high}{unit})."
-            raise AqualinkInvalidParameterException(msg)
-
-        # Determine which setpoint to update based on mode
-        if self.mode == "cool" and self.supports_cooling:
-            data = {"temp_chill": str(temperature)}
-        else:
-            # For heat mode, use the pool setpoint
-            data = {"temp2": str(temperature)}  # Pool is temp2 when spa is present
-            
-        await self.system.set_temps(data)
