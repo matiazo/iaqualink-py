@@ -525,6 +525,15 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
         """Current color effect."""
         return self.data.get("zoneColor", "off")
 
+    @property
+    def supported_effects(self) -> dict[str, int]:
+        """Supported color effects for ICL lights."""
+        # ICL lights use direct RGB/white control instead of predefined effects
+        return {
+            "Off": 0,
+            "Custom": 1,
+        }
+
     async def turn_on(self) -> None:
         if not self.is_on:
             data = {"zoneId": self.zone_id, "zoneStatus": "on"}
@@ -595,6 +604,11 @@ class IaquaHeatPump(IaquaDevice, AqualinkHeatPump):
     def heat_pump_type(self) -> str | None:
         """Type of heat pump (2-wire, 4-wire, etc.)."""
         return self.data.get("heatpumptype")
+
+    @property
+    def state(self) -> str:
+        """State of the heat pump."""
+        return self.data.get("heatpumpstatus", "off")
 
     async def turn_on(self) -> None:
         if not self.is_on:
