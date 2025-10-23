@@ -247,12 +247,18 @@ class IaquaSystem(AqualinkSystem):
 
     async def set_light(self, data: Payload) -> None:
         r = await self._send_session_request(IAQUA_COMMAND_SET_LIGHT, data)
-        # ICL lights return home_screen, regular lights return devices_screen
+        # ICL lights may return empty response, home_screen, or devices_screen
         response_data = r.json()
-        if "home_screen" in response_data:
+        if not response_data:
+            # Empty response - command succeeded but no data returned
+            LOGGER.debug("Set light command returned empty response - command completed")
+            return
+        elif "home_screen" in response_data:
             self._parse_home_response(r)
-        else:
+        elif "devices_screen" in response_data:
             self._parse_devices_response(r)
+        else:
+            LOGGER.debug(f"Unexpected set_light response format: {response_data}")
 
     async def set_icl_light(self, data: Payload) -> None:
         LOGGER.debug(f"Setting ICL light with data: {data}")
