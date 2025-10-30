@@ -507,6 +507,11 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
         return int(dim_level) if dim_level else None
 
     @property
+    def supports_brightness(self) -> bool:
+        """ICL lights support brightness control."""
+        return True
+
+    @property
     def rgb_color(self) -> tuple[int, int, int] | None:
         """RGB color values from the custom color info."""
         try:
@@ -518,6 +523,11 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
             return None
 
     @property
+    def supports_rgb_color(self) -> bool:
+        """ICL lights support RGB color control."""
+        return True
+
+    @property
     def white_value(self) -> int | None:
         """White value for RGBW support."""
         try:
@@ -526,9 +536,19 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
             return None
 
     @property
+    def supports_white_value(self) -> bool:
+        """ICL lights support white value control for RGBW."""
+        return True
+
+    @property
     def effect(self) -> str | None:
         """Current color effect."""
-        return self.data.get("zoneColor", "off")
+        return self.data.get("zoneColorVal", "off")
+
+    @property
+    def supports_effect(self) -> bool:
+        """ICL lights support color effects."""
+        return True
 
     @property
     def supported_effects(self) -> dict[str, int]:

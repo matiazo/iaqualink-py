@@ -190,6 +190,7 @@ class IaquaSystem(AqualinkSystem):
                         if device_name in devices:
                             devices[device_name].update(color_info)
                         else:
+                            # Use zone name if available, otherwise use device_name
                             color_info["name"] = device_name
                             devices[device_name] = color_info
                 continue
@@ -236,18 +237,22 @@ class IaquaSystem(AqualinkSystem):
                 for icl_info in icl_list:
                     if isinstance(icl_info, dict):
                         zone_id = icl_info.get("zoneId", 1)
+                        zone_name = icl_info.get("zoneName", f"ICL Zone {zone_id}")
                         device_name = f"icl_zone_{zone_id}"
                         LOGGER.debug(f"Processing ICL zone {zone_id}, device_name={device_name}, exists={device_name in self.devices}")
                         # Merge with existing zone data from home response
                         if device_name in self.devices:
-                            # Update existing device data
+                            # Update existing device data with zone name
                             LOGGER.debug(f"Updating existing ICL device {device_name} with {icl_info}")
                             for dk, dv in icl_info.items():
                                 self.devices[device_name].data[dk] = dv
+                            # Update the name to use zoneName
+                            self.devices[device_name].data["name"] = zone_name
                             LOGGER.debug(f"After update, device data: {self.devices[device_name].data}")
                         else:
                             # Create new device (shouldn't happen, but handle it)
                             LOGGER.debug(f"Creating new ICL device {device_name}")
+                            icl_info["name"] = zone_name
                             icl_info["name"] = device_name
                             try:
                                 self.devices[device_name] = IaquaDevice.from_data(self, icl_info)
