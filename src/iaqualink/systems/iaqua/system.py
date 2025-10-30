@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import secrets
 import time
 from typing import TYPE_CHECKING
 
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
     from iaqualink.typing import Payload
 
 IAQUA_SESSION_URL = "https://p-api.iaqualink.net/v1/mobile/session.json"
+IAQUA_V2_COMMAND_URL = "https://prm.iaqualink.net/v2/webtouch/command"
 
 IAQUA_COMMAND_GET_DEVICES = "get_devices"
 IAQUA_COMMAND_GET_HOME = "get_home"
@@ -27,7 +29,9 @@ IAQUA_COMMAND_GET_ONETOUCH = "get_onetouch"
 
 IAQUA_COMMAND_SET_AUX = "set_aux"
 IAQUA_COMMAND_SET_LIGHT = "set_light"
-IAQUA_COMMAND_SET_ICL_LIGHT = "set_icl_light"
+IAQUA_COMMAND_ONOFF_ICLZONE = "onoff_iclzone"
+IAQUA_COMMAND_SET_ICLZONE_COLOR = "set_iclzone_color"
+IAQUA_COMMAND_DEFINE_ICLZONE_CUSTOMCOLOR = "define_iclzone_customcolor"
 IAQUA_COMMAND_SET_HEATPUMP = "set_heatpump"
 IAQUA_COMMAND_SET_POOL_HEATER = "set_pool_heater"
 IAQUA_COMMAND_SET_POOL_PUMP = "set_pool_pump"
@@ -73,6 +77,59 @@ class IaquaSystem(AqualinkSystem):
         params_str = "&".join(f"{k}={v}" for k, v in params.items())
         url = f"{IAQUA_SESSION_URL}?{params_str}"
         return await self.aqualink.send_request(url)
+
+    async def set_icl_light(self, data: Payload) -> None:
+        """Control ICL lights using v1 API commands from GitHub issue #39."""
+        LOGGER.debug(f"Setting ICL light with data: {data}")
+        zone_id = data.get("zoneId", "1")
+        
+        # Determine which command to use based on data
+        if "on_off_action" in data:
+            # Turn on/off: command=onoff_iclzone&zone_id=1&on_off_action=off
+            command = IAQUA_COMMAND_ONOFF_ICLZONE
+            params = {
+                "zone_id": zone_id,
+                "on_off_action": data["on_off_action"]
+            }
+        elif "color_id" in data:
+            # Set preset color: command=set_iclzone_color&zone_id=1&color_id=2&dim_level=100
+            command = IAQUA_COMMAND_SET_ICLZONE_COLOR
+            params = {
+                "zone_id": zone_id,
+                "color_id": data["color_id"],
+                "dim_level": data.get("dim_level", "100")
+            }
+        elif "red_val" in data:
+            # Set custom color: command=define_iclzone_customcolor&zone_id=1&red_val=255&green_val=110&blue_val=145&white_val=0
+            command = IAQUA_COMMAND_DEFINE_ICLZONE_CUSTOMCOLOR
+            params = {
+                "zone_id": zone_id,
+                "red_val": data["red_val"],
+                "green_val": data["green_val"],
+                "blue_val": data["blue_val"],
+                "white_val": data.get("white_val", "0")
+            }
+        else:
+            LOGGER.error(f"Unknown ICL command data: {data}")
+            return
+        
+        LOGGER.debug(f"Using command {command} with params: {params}")
+        r = await self._send_session_request(command, params)
+        LOGGER.debug(f"ICL light response status: {r.status_code}")
+        
+        # Parse response to update device states
+        response_data = r.json()
+        if not response_data:
+            LOGGER.debug("ICL light command returned empty response - command completed")
+            return
+        elif "home_screen" in response_data:
+            LOGGER.debug("Parsing home_screen response")
+            self._parse_home_response(r)
+        elif "devices_screen" in response_data:
+            LOGGER.debug("Parsing devices_screen response")
+            self._parse_devices_response(r)
+        else:
+            LOGGER.debug(f"Unexpected ICL response format: {response_data}")
 
     async def _send_home_screen_request(self) -> httpx.Response:
         return await self._send_session_request(IAQUA_COMMAND_GET_HOME)
@@ -246,7 +303,11 @@ class IaquaSystem(AqualinkSystem):
         self._parse_devices_response(r)
 
     async def set_light(self, data: Payload) -> None:
+        LOGGER.debug(f"Setting light with data: {data}")
+        # Use v1 API for all lights (regular and ICL)
         r = await self._send_session_request(IAQUA_COMMAND_SET_LIGHT, data)
+        LOGGER.debug(f"Set light response status: {r.status_code}")
+        
         # ICL lights may return empty response, home_screen, or devices_screen
         response_data = r.json()
         if not response_data:
@@ -254,28 +315,13 @@ class IaquaSystem(AqualinkSystem):
             LOGGER.debug("Set light command returned empty response - command completed")
             return
         elif "home_screen" in response_data:
+            LOGGER.debug("Parsing home_screen response")
             self._parse_home_response(r)
         elif "devices_screen" in response_data:
+            LOGGER.debug("Parsing devices_screen response")
             self._parse_devices_response(r)
         else:
             LOGGER.debug(f"Unexpected set_light response format: {response_data}")
-
-    async def set_icl_light(self, data: Payload) -> None:
-        LOGGER.debug(f"Setting ICL light with data: {data}")
-        # Try different command formats for ICL
-        zone_id = data.get("zoneId", "1")
-        
-        # Maybe the command includes the zone? Like "set_light_1" or "set_icl_1"
-        # Or maybe it's just "set_light" with zone parameter
-        # Let's try the standard set_light command with zone info
-        try:
-            r = await self._send_session_request(IAQUA_COMMAND_SET_LIGHT, data)
-            LOGGER.debug(f"ICL light response: {r.status_code}")
-            self._parse_home_response(r)
-            self._parse_devices_response(r)
-        except Exception as e:
-            LOGGER.error(f"ICL light command failed: {e}")
-            raise
 
     async def set_heatpump(self, data: Payload) -> None:
         r = await self._send_session_request(IAQUA_COMMAND_SET_HEATPUMP, data)

@@ -542,10 +542,10 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
     async def turn_on(self) -> None:
         if not self.is_on:
             LOGGER.debug(f"Turning on ICL light zone {self.zone_id}")
-            # ICL uses set_light with zoneId parameter
-            data = {"zoneId": str(self.zone_id), "light": "1"}
+            # Use onoff_iclzone command from GitHub issue #39
+            data = {"zoneId": str(self.zone_id), "on_off_action": "on"}
             try:
-                await self.system.set_light(data)
+                await self.system.set_icl_light(data)
             except Exception as e:
                 LOGGER.error(f"Failed to turn on ICL light: {e}", exc_info=True)
                 raise
@@ -553,10 +553,10 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
     async def turn_off(self) -> None:
         if self.is_on:
             LOGGER.debug(f"Turning off ICL light zone {self.zone_id}")
-            # ICL uses set_light with zoneId parameter
-            data = {"zoneId": str(self.zone_id), "light": "0"}
+            # Use onoff_iclzone command from GitHub issue #39
+            data = {"zoneId": str(self.zone_id), "on_off_action": "off"}
             try:
-                await self.system.set_light(data)
+                await self.system.set_icl_light(data)
             except Exception as e:
                 LOGGER.error(f"Failed to turn off ICL light: {e}", exc_info=True)
                 raise
@@ -566,32 +566,46 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
             msg = f"{brightness}% isn't a valid brightness level (0-100)."
             raise AqualinkInvalidParameterException(msg)
 
-        data = {"zoneId": str(self.zone_id), "dim_level": str(brightness)}
-        await self.system.set_light(data)
+        # According to GitHub issue #39, brightness is only supported with preset colors
+        # via set_iclzone_color command. Custom colors don't support brightness dimming.
+        # We'll use a white preset color (color_id=1 is typically white)
+        data = {
+            "zoneId": str(self.zone_id), 
+            "color_id": "1",  # Use preset white color which supports dimming
+            "dim_level": str(brightness)
+        }
+        await self.system.set_icl_light(data)
 
     async def set_rgb_color(self, red: int, green: int, blue: int) -> None:
         if not all(0 <= val <= 255 for val in [red, green, blue]):
             msg = "RGB values must be between 0 and 255."
             raise AqualinkInvalidParameterException(msg)
 
+        # Use define_iclzone_customcolor command from GitHub issue #39
         data = {
             "zoneId": str(self.zone_id),
             "red_val": str(red),
             "green_val": str(green),
             "blue_val": str(blue),
+            "white_val": str(self.white_value or 0),
         }
-        if self.white_value is not None:
-            data["white_val"] = str(self.white_value)
-        
-        await self.system.set_light(data)
+        await self.system.set_icl_light(data)
 
     async def set_white_value(self, white: int) -> None:
         if not 0 <= white <= 255:
             msg = "White value must be between 0 and 255."
             raise AqualinkInvalidParameterException(msg)
 
-        data = {"zoneId": str(self.zone_id), "white_val": str(white)}
-        await self.system.set_light(data)
+        # Set white value with current RGB values
+        rgb = self.rgb_color or (255, 255, 255)
+        data = {
+            "zoneId": str(self.zone_id),
+            "red_val": str(rgb[0]),
+            "green_val": str(rgb[1]),
+            "blue_val": str(rgb[2]),
+            "white_val": str(white)
+        }
+        await self.system.set_icl_light(data)
 
 
 class IaquaHeatPump(IaquaSwitch):
