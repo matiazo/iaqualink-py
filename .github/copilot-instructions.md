@@ -7,8 +7,8 @@ This project provides a Python library and Home Assistant custom integration for
 ## Server Environment
 
 ### Connection Details
-- **Read Access**: `master@kube1.local`
-- **Write Access**: `root@kube1.local`
+- **Read Access**: `master@dell7050`
+- **Write Access**: `master@dell7050`
 - **Home Assistant Container**: `home-assistant` (Docker)
 - **Python Version in Container**: 3.13
 
@@ -24,66 +24,88 @@ This project provides a Python library and Home Assistant custom integration for
 
 **View recent logs**:
 ```bash
-ssh master@kube1.local 'tail -100 /home/master/homeassistant/home-assistant.log'
+ssh master@dell7050 'tail -100 /home/master/homeassistant/home-assistant.log'
 ```
 
 **Follow logs in real-time**:
 ```bash
-ssh master@kube1.local 'tail -f /home/master/homeassistant/home-assistant.log'
+ssh master@dell7050 'tail -f /home/master/homeassistant/home-assistant.log'
 ```
 
 **Check for integration-specific logs**:
 ```bash
-ssh master@kube1.local 'grep iaqualink /home/master/homeassistant/home-assistant.log | tail -50'
+ssh master@dell7050 'grep iaqualink /home/master/homeassistant/home-assistant.log | tail -50'
 ```
 
 **Check for errors**:
 ```bash
-ssh master@kube1.local 'grep -i error /home/master/homeassistant/home-assistant.log | tail -30'
+ssh master@dell7050 'grep -i error /home/master/homeassistant/home-assistant.log | tail -30'
 ```
 
 **Check ICL light logs with color debugging**:
 ```bash
-ssh master@kube1.local 'tail -200 /home/master/homeassistant/home-assistant.log | grep -E "(Setting ICL|red_val|white_val|Pool lights)"'
+ssh master@dell7050 'tail -200 /home/master/homeassistant/home-assistant.log | grep -E "(Setting ICL|red_val|white_val|Pool lights)"'
 ```
 
 ### Restarting Home Assistant
 
 **Restart the container**:
 ```bash
-ssh root@kube1.local 'docker restart home-assistant'
+ssh master@dell7050 'docker restart home-assistant'
 ```
 
 Wait 30-40 seconds for Home Assistant to fully start before checking logs or testing.
 
 **Verify container is running**:
 ```bash
-ssh root@kube1.local 'docker ps | grep home-assistant'
+ssh master@dell7050 'docker ps | grep home-assistant'
 ```
 
 ### Backup Management
 
 **List existing backups**:
 ```bash
-ssh master@kube1.local 'ls -la /home/master/homeassistant_backups/'
+ssh master@dell7050 'ls -la /home/master/homeassistant_backups/'
 ```
 
 **Create manual backup** (before making changes):
 ```bash
-ssh root@kube1.local 'mkdir -p /home/master/homeassistant_backups && cp -r /home/master/homeassistant/custom_components/iaqualink /home/master/homeassistant_backups/iaqualink.backup.$(date +%Y%m%d_%H%M%S)'
+ssh master@dell7050 'mkdir -p /home/master/homeassistant_backups && cp -r /home/master/homeassistant/custom_components/iaqualink /home/master/homeassistant_backups/iaqualink.backup.$(date +%Y%m%d_%H%M%S)'
 ```
 
 **Restore from backup**:
 ```bash
-ssh root@kube1.local 'cp -r /home/master/homeassistant_backups/iaqualink.backup.YYYYMMDD_HHMMSS/* /home/master/homeassistant/custom_components/iaqualink/ && docker restart home-assistant'
+ssh master@dell7050 'cp -r /home/master/homeassistant_backups/iaqualink.backup.YYYYMMDD_HHMMSS/* /home/master/homeassistant/custom_components/iaqualink/ && docker restart home-assistant'
 ```
 
 **Clean old backups** (keep last 5):
 ```bash
-ssh root@kube1.local 'cd /home/master/homeassistant_backups && ls -t | grep iaqualink.backup | tail -n +6 | xargs -r rm -rf'
+ssh master@dell7050 'cd /home/master/homeassistant_backups && ls -t | grep iaqualink.backup | tail -n +6 | xargs -r rm -rf'
 ```
 
 ## Deployment Workflow
+
+### CRITICAL: Installing the iaqualink Library
+
+The Home Assistant container comes with stock `iaqualink` v0.6.0 which does NOT support ICL lights. You MUST install this forked version after any container recreation:
+
+```bash
+# Install the forked iaqualink library (REQUIRED for ICL lights)
+ssh master@dell7050 'docker exec home-assistant pip install --no-deps "git+https://github.com/matiazo/iaqualink-py.git@master"'
+
+# Restart Home Assistant
+ssh master@dell7050 'docker restart home-assistant'
+
+# Verify the correct version is installed (should show 0.1.dev* not 0.6.0)
+ssh master@dell7050 'docker exec home-assistant pip show iaqualink'
+```
+
+**IMPORTANT**: The `--no-deps` flag is critical to avoid upgrading aiodns/pycares which breaks HA.
+
+If Home Assistant crashes with `pycares.ares_query_a_result` error, fix with:
+```bash
+ssh master@dell7050 'docker exec home-assistant pip install aiodns==3.5.0 pycares==4.11.0 && docker restart home-assistant'
+```
 
 ### Deploying Custom Integration Changes
 
@@ -101,12 +123,12 @@ This script:
 
 **2. Restart Home Assistant**:
 ```powershell
-ssh root@kube1.local 'docker restart home-assistant'
+ssh master@dell7050 'docker restart home-assistant'
 ```
 
 **3. Verify deployment**:
 ```bash
-ssh master@kube1.local 'grep iaqualink /home/master/homeassistant/home-assistant.log | tail -20'
+ssh master@dell7050 'grep iaqualink /home/master/homeassistant/home-assistant.log | tail -20'
 ```
 
 ### Deploying Python Library Changes
@@ -116,13 +138,13 @@ When changes are made to the core library (e.g., `src/iaqualink/systems/iaqua/de
 **Copy updated library file to container**:
 ```bash
 # 1. Copy to server temp location
-scp src/iaqualink/systems/iaqua/device.py master@kube1.local:/tmp/device.py
+scp src/iaqualink/systems/iaqua/device.py master@dell7050:/tmp/device.py
 
 # 2. Copy into container
-ssh root@kube1.local 'docker cp /tmp/device.py home-assistant:/usr/local/lib/python3.13/site-packages/iaqualink/systems/iaqua/device.py'
+ssh master@dell7050 'docker cp /tmp/device.py home-assistant:/usr/local/lib/python3.13/site-packages/iaqualink/systems/iaqua/device.py'
 
 # 3. Restart Home Assistant
-ssh root@kube1.local 'docker restart home-assistant'
+ssh master@dell7050 'docker restart home-assistant'
 ```
 
 ### Refreshing from Remote Repository
@@ -130,7 +152,7 @@ ssh root@kube1.local 'docker restart home-assistant'
 To update the Python library in Home Assistant from the latest GitHub repository:
 
 ```bash
-ssh root@kube1.local 'docker exec home-assistant pip install --no-cache-dir --upgrade --force-reinstall "git+https://github.com/matiazo/iaqualink-py.git@master" && docker restart home-assistant'
+ssh master@dell7050 'docker exec home-assistant pip install --no-cache-dir --upgrade --force-reinstall "git+https://github.com/matiazo/iaqualink-py.git@master" && docker restart home-assistant'
 ```
 
 This is useful when:
@@ -141,10 +163,10 @@ This is useful when:
 ## File Structure
 
 ### Local Development
-- **Custom Integration Template**: `homeassistant_integration_light.py` (source file)
-- **Custom Integration Copy**: `ha_custom_component/light.py` (deployed copy)
-- **Python Library**: `src/iaqualink/` (core library)
+- **Custom Integration**: `ha_custom_component/` (the full HA custom component, tracked in git)
+- **Python Library**: `src/iaqualink/` (core library with ICL light support)
 - **Deployment Scripts**: `copy_to_server.ps1`, `copy_from_server.ps1`, `restart_homeassistant.ps1`
+- **Legacy Template**: `homeassistant_integration_light.py` (older source file for light.py)
 
 ### Server Deployment
 - **Custom Integration**: `/home/master/homeassistant/custom_components/iaqualink/`
@@ -194,7 +216,7 @@ self.async_write_ha_state()
 - **Cause**: Python .pyc files not refreshing
 - **Solution**: Clear cache and restart:
   ```bash
-  ssh root@kube1.local 'rm -rf /home/master/homeassistant/custom_components/iaqualink/__pycache__ && docker restart home-assistant'
+  ssh master@dell7050 'rm -rf /home/master/homeassistant/custom_components/iaqualink/__pycache__ && docker restart home-assistant'
   ```
 
 ## Testing Checklist
@@ -203,22 +225,22 @@ After deploying changes, verify:
 
 1. **Integration Loads**:
    ```bash
-   ssh master@kube1.local 'grep "Got.*lights" /home/master/homeassistant/home-assistant.log | tail -5'
+   ssh master@dell7050 'grep "Got.*lights" /home/master/homeassistant/home-assistant.log | tail -5'
    ```
 
 2. **No Errors**:
    ```bash
-   ssh master@kube1.local 'grep -i "error.*iaqualink\|exception.*iaqualink" /home/master/homeassistant/home-assistant.log | tail -10'
+   ssh master@dell7050 'grep -i "error.*iaqualink\|exception.*iaqualink" /home/master/homeassistant/home-assistant.log | tail -10'
    ```
 
 3. **ICL Lights Detected**:
    ```bash
-   ssh master@kube1.local 'grep "Pool lights" /home/master/homeassistant/home-assistant.log | tail -3'
+   ssh master@dell7050 'grep "Pool lights" /home/master/homeassistant/home-assistant.log | tail -3'
    ```
 
 4. **Color Commands Working**:
    ```bash
-   ssh master@kube1.local 'grep "Setting ICL light" /home/master/homeassistant/home-assistant.log | tail -10'
+   ssh master@dell7050 'grep "Setting ICL light" /home/master/homeassistant/home-assistant.log | tail -10'
    ```
 
 ## Best Practices
@@ -248,31 +270,62 @@ Then restart Home Assistant.
 
 **Monitor API calls in real-time**:
 ```bash
-ssh master@kube1.local 'tail -f /home/master/homeassistant/home-assistant.log | grep -E "(-> GET|<- 200|Setting ICL)"'
+ssh master@dell7050 'tail -f /home/master/homeassistant/home-assistant.log | grep -E "(-> GET|<- 200|Setting ICL)"'
 ```
 
 **Check Python library version in container**:
 ```bash
-ssh root@kube1.local 'docker exec home-assistant pip show iaqualink'
+ssh master@dell7050 'docker exec home-assistant pip show iaqualink'
 ```
 
 **Verify file permissions**:
 ```bash
-ssh root@kube1.local 'ls -la /home/master/homeassistant/custom_components/iaqualink/'
+ssh master@dell7050 'ls -la /home/master/homeassistant/custom_components/iaqualink/'
 ```
 
 ## Quick Reference Commands
 
 ```bash
 # Quick status check
-ssh master@kube1.local 'tail -50 /home/master/homeassistant/home-assistant.log | grep iaqualink'
+ssh master@dell7050 'tail -50 /home/master/homeassistant/home-assistant.log | grep iaqualink'
 
 # Quick restart and verify
-ssh root@kube1.local 'docker restart home-assistant' && sleep 40 && ssh master@kube1.local 'grep iaqualink /home/master/homeassistant/home-assistant.log | tail -10'
+ssh master@dell7050 'docker restart home-assistant' && sleep 40 && ssh master@dell7050 'grep iaqualink /home/master/homeassistant/home-assistant.log | tail -10'
 
 # Emergency restore (replace TIMESTAMP with actual backup)
-ssh root@kube1.local 'cp -r /home/master/homeassistant_backups/iaqualink.backup.TIMESTAMP/* /home/master/homeassistant/custom_components/iaqualink/ && docker restart home-assistant'
+ssh master@dell7050 'cp -r /home/master/homeassistant_backups/iaqualink.backup.TIMESTAMP/* /home/master/homeassistant/custom_components/iaqualink/ && docker restart home-assistant'
 
 # Full deployment pipeline
-.\copy_to_server.ps1 && ssh root@kube1.local 'docker restart home-assistant' && sleep 40 && ssh master@kube1.local 'grep iaqualink /home/master/homeassistant/home-assistant.log | tail -20'
+.\copy_to_server.ps1 && ssh master@dell7050 'docker restart home-assistant' && sleep 40 && ssh master@dell7050 'grep iaqualink /home/master/homeassistant/home-assistant.log | tail -20'
+
+# After container recreation - install forked library
+ssh master@dell7050 'docker exec home-assistant pip install --no-deps "git+https://github.com/matiazo/iaqualink-py.git@master" && docker restart home-assistant'
+
+# Verify ICL lights are detected (should show "Got 1 lights")
+ssh master@dell7050 'grep "Got.*lights" /home/master/homeassistant/home-assistant.log | tail -3'
 ```
+
+## After Server Migration / Container Recreation
+
+If you migrate to a new server or recreate the Docker container, follow these steps:
+
+1. **Deploy custom integration files**:
+   ```powershell
+   .\copy_to_server.ps1
+   ```
+
+2. **Install the forked iaqualink library** (stock HA has v0.6.0 without ICL support):
+   ```bash
+   ssh master@dell7050 'docker exec home-assistant pip install --no-deps "git+https://github.com/matiazo/iaqualink-py.git@master"'
+   ```
+
+3. **Restart Home Assistant**:
+   ```bash
+   ssh master@dell7050 'docker restart home-assistant'
+   ```
+
+4. **Verify lights are detected**:
+   ```bash
+   ssh master@dell7050 'grep "Got.*lights" /home/master/homeassistant/home-assistant.log | tail -5'
+   ```
+   Should show: `Got 1 lights: [IaquaICLLight(...)]`

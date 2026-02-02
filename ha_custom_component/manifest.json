@@ -1,0 +1,12 @@
+{
+  "domain": "iaqualink",
+  "name": "Jandy iAqualink",
+  "codeowners": ["@matiazo"],
+  "config_flow": true,
+  "version": "0.0.4",
+  "documentation": "https://www.home-assistant.io/integrations/iaqualink",
+  "iot_class": "cloud_polling",
+  "loggers": ["iaqualink"],
+  "requirements": ["iaqualink@git+https://github.com/matiazo/iaqualink-py.git@master", "h2==4.3.0"],
+  "single_config_entry": true
+}
