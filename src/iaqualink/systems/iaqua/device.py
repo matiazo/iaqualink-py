@@ -596,18 +596,20 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
         }
         await self.system.set_icl_light(data)
 
-    async def set_rgb_color(self, red: int, green: int, blue: int) -> None:
+    async def set_rgb_color(self, red: int, green: int, blue: int, white: int | None = None) -> None:
         if not all(0 <= val <= 255 for val in [red, green, blue]):
             msg = "RGB values must be between 0 and 255."
             raise AqualinkInvalidParameterException(msg)
 
         # Use define_iclzone_customcolor command from GitHub issue #39
+        # Use provided white value or keep current white value
+        white_val = white if white is not None else (self.white_value or 0)
         data = {
             "zoneId": str(self.zone_id),
             "red_val": str(red),
             "green_val": str(green),
             "blue_val": str(blue),
-            "white_val": str(self.white_value or 0),
+            "white_val": str(white_val),
         }
         await self.system.set_icl_light(data)
 

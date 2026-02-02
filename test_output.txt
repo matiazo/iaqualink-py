@@ -1,0 +1,133 @@
+2025-10-23 11:50:47,191 - asyncio - DEBUG - Using proactor: IocpProactor
+2025-10-23 11:50:47,914 - iaqualink - DEBUG - -> POST https://prod.zodiac-io.com/users/v1/login {'json': {'api_key': 'EOOEMOW4YR6QNB07', 'email': 'matiazo@outlook.com', 'password': '@8XmL*&7B$%fwQ'}}
+2025-10-23 11:50:47,931 - httpcore.connection - DEBUG - connect_tcp.started host='prod.zodiac-io.com' port=443 local_address=None timeout=5.0 socket_options=None
+2025-10-23 11:50:47,973 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C815684AD0>
+2025-10-23 11:50:47,974 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x000001C8155D82D0> server_hostname='prod.zodiac-io.com' timeout=5.0
+2025-10-23 11:50:48,008 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C8155CE850>
+2025-10-23 11:50:48,008 - httpcore.http2 - DEBUG - send_connection_init.started request=<Request [b'POST']>
+2025-10-23 11:50:48,009 - httpcore.http2 - DEBUG - send_connection_init.complete
+2025-10-23 11:50:48,010 - httpcore.http2 - DEBUG - send_request_headers.started request=<Request [b'POST']> stream_id=1
+2025-10-23 11:50:48,010 - hpack.hpack - DEBUG - Adding (b':method', b'POST') to the header table, sensitive:False, huffman:True
+2025-10-23 11:50:48,010 - hpack.hpack - DEBUG - Encoding 3 with 7 bits
+2025-10-23 11:50:48,010 - hpack.hpack - DEBUG - Adding (b':authority', b'prod.zodiac-io.com') to the header table, sensitive:False, huffman:True
+2025-10-23 11:50:48,010 - hpack.hpack - DEBUG - Encoding 1 with 6 bits
+2025-10-23 11:50:48,010 - hpack.hpack - DEBUG - Encoding 13 with 7 bits
+2025-10-23 11:50:48,010 - hpack.hpack - DEBUG - Adding (b':scheme', b'https') to the header table, sensitive:False, huffman:True
+2025-10-23 11:50:48,010 - hpack.hpack - DEBUG - Encoding 7 with 7 bits
+2025-10-23 11:50:48,010 - hpack.hpack - DEBUG - Adding (b':path', b'/users/v1/login') to the header table, sensitive:False, huffman:True
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Encoding 4 with 6 bits
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Encoding 11 with 7 bits
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Adding (b'accept', b'*/*') to the header table, sensitive:False, huffman:True
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Encoding 19 with 6 bits
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Encoding 3 with 7 bits
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Adding (b'accept-encoding', b'gzip, deflate') to the header table, sensitive:False, huffman:True
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Encoding 16 with 7 bits
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Adding (b'user-agent', b'okhttp/3.14.7') to the header table, sensitive:False, huffman:True
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Encoding 58 with 6 bits
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Encoding 10 with 7 bits
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Adding (b'content-type', b'application/json') to the header table, sensitive:False, huffman:True
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Encoding 31 with 6 bits
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Encoding 11 with 7 bits
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Adding (b'content-length', b'88') to the header table, sensitive:False, huffman:True
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Encoding 28 with 6 bits
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Encoding 2 with 7 bits
+2025-10-23 11:50:48,011 - hpack.hpack - DEBUG - Encoded header block to b'\x83A\x8d\xae\xc3\xc8\xbf\xb3\xc8a\x91c\x1dr\x1e\x9f\x87D\x8bb\xd4\x16\xc41\xdc,Py\x8dWS\x83\xf9c\xe7\x90z\x8a?Y\xd2\x9a\xd8ep\xb4\xbb\xbf_\x8b\x1du\xd0b\r&=LtA\xea\\\x82y\xef'
+2025-10-23 11:50:48,012 - httpcore.http2 - DEBUG - send_request_headers.complete
+2025-10-23 11:50:48,012 - httpcore.http2 - DEBUG - send_request_body.started request=<Request [b'POST']> stream_id=1
+2025-10-23 11:50:48,012 - httpcore.http2 - DEBUG - send_request_body.complete
+2025-10-23 11:50:48,012 - httpcore.http2 - DEBUG - receive_response_headers.started request=<Request [b'POST']> stream_id=1
+2025-10-23 11:50:48,036 - httpcore.http2 - DEBUG - receive_remote_settings.started
+2025-10-23 11:50:48,036 - httpcore.http2 - DEBUG - receive_remote_settings.complete return_value=<RemoteSettingsChanged changed_settings:{ChangedSetting(setting=4, original_value=65535, new_value=20000000), ChangedSetting(setting=3, original_value=None, new_value=128)}>
+2025-10-23 11:50:48,710 - hpack.hpack - DEBUG - Decoding b"?\xe1\x1f\x88a\x96\xdf=\xbfJ\t\x955\x11*\x08\x02m@\xb7q\xb0\\i\xe51h\xdf_\x96\x1du\xd0b\r&=LtA\xea\xfbP\x93\x8e\xc4\x150Z\x99V{@\x8c\xf2\xb0\xe9\xf7R\xd6\x17\xb5\xa5BM'\x9a\x1bO\x82W\n\xca\xcf\xc7!\x16i\x99%Y\xe2JE\x9e\x8cD\x96X\xda\x91\xa7\x9cT\x01*@\x8b\xf2\xb0\xe9\xf6\xb0\xeb4\xde\x164\x9f\x8d\xdc\xe6\x1b\xa2\xc3\x9b\x11\xe1\xd1\x80\xd9vA@\x8b\xf2\xb0\xe9\xf7R\xc9\xb0d*\xc6\x93\xc4\xdas\xa6\x00\xac\xe3\xd2\x8d\xa2\xc8\xf2\xc2\x08dp1\xb2\x11\x06A\xbe\xe1Z(\xa5u\xf6\x8b\xf7\xacv\x16\xa4\xc0\x06@\xdb%\x95\xc2\xbe\xf4\xad\x85\xa0}\xee\x1d5\xd0Y \x07\xdesTQ\xccX\x03q\xb0\xb2A\x10\x11\xdc\x07@\x96\x19\x08T!b\x1e\xa4\xd8z\x16\x1d\x14\x1f\xc2\xc4\xb0\xb2\x16\xa4\x98t#\x83M\x96\x97\x0f(\xe1\xaa\x88\xcd\x10\x9f\x03\xcf\xb6\xf4\x15\xf9\xed\xd7\x11\x9c\xa1\x96Ygu\xdd\xbcj\xfc\x87\x16\xb9\xa1\x86\x18n\xff\xbeX\x13\xe4\x8eao\xae\x01\xed\xc7\xd7\xf4\xf7\xb3y\xc7\xf6\xa64\xa6\xbdUQ\xeb\xedJ\xc6\x99\xe0c\xedK\xe7\xa4f\xaa\x05\xfd\x9eC\x0c\x8b\x18\xeb\x90\xf4\xfd\xa9\xb8\xa4\xb6\xc2\xfd\xa9\xb8t\x97q\x92X4\x9e\xa2\xff\x0f(\xff\x10\xeed\x1aH\x8dQ\x07\\B|\x0f>\xdb\xd0{\xdd\xdb\xc0\xfd\xc9\x8bn\x1fA\xde\x9cy<\x07\x8fbh\xf3\xab\xfd\xd340\xc3\x0c;8d\xd7\x0c0\xc3\x0c7\x9bp\xb7\xf9_\xa7f\xbd\xb8\xf1G\xfb\xee\x19\xfd\xfeB\x7f\xb5\x0b\xe6\xb3XTA\x86\xc3}(&T\xd4D\xa8 \t\xc5\x00\xe5\xc1\x06\xe3o)\x8bF\xff\xb51\xa55\xea\xaa\x8f_jV4\xcf\x03\x1fj_=#5P/\xec\xf2\x18dX\xc7\\\x87\xa7\xedM\xc5%\xb6\x17\xedM\xc3\xa4\xbb\x8c\x92\xc1\xa4\xf5\x17\x0f(\xe45D\x1dq \xa8\x88,\x84\x11\t\xf0<\xfboA\x93\xf7\x19%j>ob\x8f\xcd\x1aA\x0c\xbe\x1a\xb7\x02g\xd5\xfe\xe9\x9a\x18a\x86\x1b\xfc\x83\xf8\n9\xec\xc9\xb0\xce\xf5\xa2IM>\xc6\xf4l\x82\x0f\xb5+\x1ag\x81\x8f\xb5/\x9e\x91\x9a\xa8\x17\xf6y\x0c2,c\xaeC\xd3\xf6\xa6\xe2\x92\xdb\x0b\xf6\xa6\xe1\xd2]\xc6I`\xd2z\x8bx\xa0\xa4~V\x1c\xc5\x81\x90\xb6\xcb\x80\x00>\xd45D\xa2\xd9\x0b\xba\xd8\xef\x9e\x91\x9a\xa4}\xa9]\x85\xa0\xe3\x93@\x84\xf2\xb1$\xab\x86\xc9Me\xb3\xb8\xffZ\x83\x9b\xd9\xab@\x85\xf2\xb1\x8dT\xa7\xb4mg\x04\xe8\x9bm\xc7\x16pN\x05\xc6@\xea\x95\xe9\xe7\xa5M\xbb\xff\xa0\xba\xe0D\xcbN4\xf0\x1byF\x9e\xfe\xd4\xed\xfd\x01@(\x05\x01\xfd\xa9g\xf4\xea\x8e\xffjps"
+2025-10-23 11:50:48,710 - hpack.hpack - DEBUG - Decoded 4096, consumed 3 bytes
+2025-10-23 11:50:48,711 - hpack.table - DEBUG - Resizing header table to 4096 from 4096
+2025-10-23 11:50:48,711 - hpack.hpack - DEBUG - Decoded 8, consumed 1 bytes
+2025-10-23 11:50:48,711 - hpack.hpack - DEBUG - Decoded (b':status', b'200'), consumed 1
+2025-10-23 11:50:48,712 - hpack.hpack - DEBUG - Decoded 33, consumed 1 bytes
+2025-10-23 11:50:48,712 - hpack.hpack - DEBUG - Decoded 22, consumed 1 bytes
+2025-10-23 11:50:48,712 - hpack.hpack - DEBUG - Decoded (b'date', b'Thu, 23 Oct 2025 15:50:48 GMT'), total consumed 24 bytes, indexed True
+2025-10-23 11:50:48,712 - hpack.hpack - DEBUG - Decoded 31, consumed 1 bytes
+2025-10-23 11:50:48,713 - hpack.hpack - DEBUG - Decoded 22, consumed 1 bytes
+2025-10-23 11:50:48,713 - hpack.hpack - DEBUG - Decoded (b'content-type', b'application/json; charset=utf-8'), total consumed 24 bytes, indexed True
+2025-10-23 11:50:48,713 - hpack.hpack - DEBUG - Decoded 12, consumed 1 bytes
+2025-10-23 11:50:48,713 - hpack.hpack - DEBUG - Decoded 26, consumed 1 bytes
+2025-10-23 11:50:48,713 - hpack.hpack - DEBUG - Decoded (b'x-amzn-requestid', b'a490f6e3-9bdc-43df-8cfc-8b2cffb4d486'), total consumed 41 bytes, indexed True
+2025-10-23 11:50:48,714 - hpack.hpack - DEBUG - Decoded 20, consumed 1 bytes
+2025-10-23 11:50:48,714 - hpack.hpack - DEBUG - Decoded 1, consumed 1 bytes
+2025-10-23 11:50:48,714 - hpack.hpack - DEBUG - Decoded (b'access-control-allow-origin', <memory at 0x000001C81558AA40>), total consumed 3 bytes, indexed True
+2025-10-23 11:50:48,714 - hpack.hpack - DEBUG - Decoded 11, consumed 1 bytes
+2025-10-23 11:50:48,714 - hpack.hpack - DEBUG - Decoded 13, consumed 1 bytes
+2025-10-23 11:50:48,714 - hpack.hpack - DEBUG - Decoded (b'x-amz-apigw-id', b'S6FB2FKGoAMEiJQ='), total consumed 27 bytes, indexed True
+2025-10-23 11:50:48,715 - hpack.hpack - DEBUG - Decoded 11, consumed 1 bytes
+2025-10-23 11:50:48,715 - hpack.hpack - DEBUG - Decoded 68, consumed 1 bytes
+2025-10-23 11:50:48,715 - hpack.hpack - DEBUG - Decoded (b'x-amzn-trace-id', b'Root=1-68fa4ed8-211d61b3121da96e4e2f794e;Parent=03053ef6e98f5140;Sampled=0;Lineage=1:513c2c0b:0'), total consumed 82 bytes, indexed True
+2025-10-23 11:50:48,715 - hpack.hpack - DEBUG - Decoded 22, consumed 1 bytes
+2025-10-23 11:50:48,715 - hpack.hpack - DEBUG - Decoded 3, consumed 1 bytes
+2025-10-23 11:50:48,716 - hpack.hpack - DEBUG - Decoded (b'access-control-allow-credentials', b'true'), total consumed 28 bytes, indexed True
+2025-10-23 11:50:48,716 - hpack.hpack - DEBUG - Decoded 55, consumed 2 bytes
+2025-10-23 11:50:48,716 - hpack.hpack - DEBUG - Decoded 97, consumed 1 bytes
+2025-10-23 11:50:48,717 - hpack.hpack - DEBUG - Decoded (b'set-cookie', b'nlbi_2908958=pxqkGi6l3333SBRVnXAGPgAAAAB+WEtxc6F5kEaRHkZoCKxH; HttpOnly; path=/; Domain=.zodiac-io.com; Secure; SameSite=None'), total consumed 100 bytes, indexed False
+2025-10-23 11:50:48,717 - hpack.hpack - DEBUG - Decoded 55, consumed 2 bytes
+2025-10-23 11:50:48,717 - hpack.hpack - DEBUG - Decoded 143, consumed 2 bytes
+2025-10-23 11:50:48,717 - hpack.hpack - DEBUG - Decoded (b'set-cookie', b'visid_incap_2908958=zSqwazdGRFy1TtHIw1VqcMxO+mgAAAAAQUIPAAAAAAC56eDWDmQPRHGbZzAhzXAo; expires=Fri, 23 Oct 2026 06:21:58 GMT; HttpOnly; path=/; Domain=.zodiac-io.com; Secure; SameSite=None'), total consumed 147 bytes, indexed False
+2025-10-23 11:50:48,717 - hpack.hpack - DEBUG - Decoded 55, consumed 2 bytes
+2025-10-23 11:50:48,718 - hpack.hpack - DEBUG - Decoded 100, consumed 1 bytes
+2025-10-23 11:50:48,718 - hpack.hpack - DEBUG - Decoded (b'set-cookie', b'incap_ses_1310_2908958=IZHcf4bY8GbxlN0Afw4uEthO+mgAAAAADW1X0lYQIQi7kldfihQ5MQ==; path=/; Domain=.zodiac-io.com; Secure; SameSite=None'), total consumed 103 bytes, indexed False
+2025-10-23 11:50:48,718 - hpack.hpack - DEBUG - Decoded 56, consumed 1 bytes
+2025-10-23 11:50:48,719 - hpack.hpack - DEBUG - Decoded 32, consumed 1 bytes
+2025-10-23 11:50:48,719 - hpack.hpack - DEBUG - Decoded (b'strict-transport-security', b'max-age=31536000; includeSubDomains; preload'), total consumed 34 bytes, indexed True
+2025-10-23 11:50:48,719 - hpack.hpack - DEBUG - Decoded 4, consumed 1 bytes
+2025-10-23 11:50:48,719 - hpack.hpack - DEBUG - Decoded 6, consumed 1 bytes
+2025-10-23 11:50:48,719 - hpack.hpack - DEBUG - Decoded (b'x-cdn', b'Imperva'), total consumed 13 bytes, indexed True
+2025-10-23 11:50:48,719 - hpack.hpack - DEBUG - Decoded 26, consumed 1 bytes
+2025-10-23 11:50:48,719 - hpack.hpack - DEBUG - Decoded 3, consumed 1 bytes
+2025-10-23 11:50:48,720 - hpack.hpack - DEBUG - Decoded (b'content-encoding', b'gzip'), total consumed 5 bytes, indexed True
+2025-10-23 11:50:48,720 - hpack.hpack - DEBUG - Decoded 5, consumed 1 bytes
+2025-10-23 11:50:48,720 - hpack.hpack - DEBUG - Decoded 52, consumed 1 bytes
+2025-10-23 11:50:48,720 - hpack.hpack - DEBUG - Decoded (b'x-iinfo', b'5-62725566-62616307 pNYN RT(1761234648058 48) q(0 0 0 0) r(7 7) U6'), total consumed 60 bytes, indexed True
+2025-10-23 11:50:48,721 - httpcore.http2 - DEBUG - receive_response_headers.complete return_value=(200, [(b'date', b'Thu, 23 Oct 2025 15:50:48 GMT'), (b'content-type', b'application/json; charset=utf-8'), (b'x-amzn-requestid', b'a490f6e3-9bdc-43df-8cfc-8b2cffb4d486'), (b'access-control-allow-origin', b'*'), (b'x-amz-apigw-id', b'S6FB2FKGoAMEiJQ='), (b'x-amzn-trace-id', b'Root=1-68fa4ed8-211d61b3121da96e4e2f794e;Parent=03053ef6e98f5140;Sampled=0;Lineage=1:513c2c0b:0'), (b'access-control-allow-credentials', b'true'), (b'set-cookie', b'nlbi_2908958=pxqkGi6l3333SBRVnXAGPgAAAAB+WEtxc6F5kEaRHkZoCKxH; HttpOnly; path=/; Domain=.zodiac-io.com; Secure; SameSite=None'), (b'set-cookie', b'visid_incap_2908958=zSqwazdGRFy1TtHIw1VqcMxO+mgAAAAAQUIPAAAAAAC56eDWDmQPRHGbZzAhzXAo; expires=Fri, 23 Oct 2026 06:21:58 GMT; HttpOnly; path=/; Domain=.zodiac-io.com; Secure; SameSite=None'), (b'set-cookie', b'incap_ses_1310_2908958=IZHcf4bY8GbxlN0Afw4uEthO+mgAAAAADW1X0lYQIQi7kldfihQ5MQ==; path=/; Domain=.zodiac-io.com; Secure; SameSite=None'), (b'strict-transport-security', b'max-age=31536000; includeSubDomains; preload'), (b'x-cdn', b'Imperva'), (b'content-encoding', b'gzip'), (b'x-iinfo', b'5-62725566-62616307 pNYN RT(1761234648058 48) q(0 0 0 0) r(7 7) U6')])
+2025-10-23 11:50:48,724 - httpx - INFO - HTTP Request: POST https://prod.zodiac-io.com/users/v1/login "HTTP/2 200 OK"
+2025-10-23 11:50:48,724 - httpcore.http2 - DEBUG - receive_response_body.started request=<Request [b'POST']> stream_id=1
+2025-10-23 11:50:48,727 - httpcore.http2 - DEBUG - receive_response_body.complete
+2025-10-23 11:50:48,728 - httpcore.http2 - DEBUG - response_closed.started stream_id=1
+2025-10-23 11:50:48,728 - httpcore.http2 - DEBUG - response_closed.complete
+2025-10-23 11:50:48,728 - iaqualink - DEBUG - <- 200 OK - https://prod.zodiac-io.com/users/v1/login
+2025-10-23 11:50:48,730 - httpcore.connection - DEBUG - close.started
+2025-10-23 11:50:48,731 - httpcore.connection - DEBUG - close.complete
+Using credentials for: matiazo@outlook.com
+============================================================
+ICL Light V2 API Integration Test
+============================================================
+Traceback (most recent call last):
+  File "C:\repo\iaqualink-py\test_icl_v2.py", line 146, in main
+    await test_icl_lights(username, password)
+  File "C:\repo\iaqualink-py\test_icl_v2.py", line 32, in test_icl_lights
+    print(f"\n\u2713 Logged in successfully")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 2: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\repo\iaqualink-py\test_icl_v2.py", line 155, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\repo\iaqualink-py\test_icl_v2.py", line 148, in main
+    print(f"\n\u2717 Test failed with error: {e}")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2717' in position 2: character maps to <undefined>

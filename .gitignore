@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Credentials file (DO NOT COMMIT)
+.credentials
+
+# Home Assistant custom component working directory
+ha_custom_component/
+
 # C extensions
 *.so
 
