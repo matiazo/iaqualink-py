@@ -8,7 +8,7 @@ Quick reference for the PowerShell scripts to manage your Home Assistant iaquali
 ```powershell
 .\copy_from_server.ps1
 ```
-- Downloads current integration from `master@kube1.local`
+- Downloads current integration from `master@dell7050`
 - Saves to `.\ha_custom_component\`
 - Use this before making changes
 
@@ -17,7 +17,7 @@ Quick reference for the PowerShell scripts to manage your Home Assistant iaquali
 .\copy_to_server.ps1
 ```
 - Copies updated `light.py` from `homeassistant_integration_light.py`
-- Uploads all files to `root@kube1.local`
+- Uploads all files to `master@dell7050`
 - Creates backup before overwriting
 - Use this after making changes
 
@@ -52,8 +52,8 @@ Quick reference for the PowerShell scripts to manage your Home Assistant iaquali
 
 ## Server Details
 
-- **Download from:** `master@kube1.local:/home/master/homeassistant/custom_components/iaqualink`
-- **Upload to:** `root@kube1.local:/home/master/homeassistant/custom_components/iaqualink`
+- **Download from:** `master@dell7050:/home/master/homeassistant/custom_components/iaqualink`
+- **Upload to:** `master@dell7050:/home/master/homeassistant/custom_components/iaqualink`
 - **Container:** `homeassistant` (Docker)
 
 ## Current Status

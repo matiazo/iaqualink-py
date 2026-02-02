@@ -1,7 +1,7 @@
 # Restart Home Assistant on server
 # Usage: .\restart_homeassistant.ps1
 
-$SERVER = "root@kube1.local"
+$SERVER = "master@dell7050"
 
 Write-Host "Restarting Home Assistant on $SERVER..." -ForegroundColor Yellow
 

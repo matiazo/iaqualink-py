@@ -29,7 +29,7 @@ Downloads the current iaqualink custom integration from your Home Assistant serv
 ```powershell
 .\copy_from_server.ps1
 ```
-- Source: `master@kube1.local:/home/master/homeassistant/custom_components/iaqualink`
+- Source: `master@dell7050:/home/master/homeassistant/custom_components/iaqualink`
 - Destination: `.\ha_custom_component\`
 
 ### `copy_to_server.ps1`
@@ -40,18 +40,18 @@ Uploads the updated integration back to your Home Assistant server.
 - Copies updated `light.py` from `homeassistant_integration_light.py`
 - Creates backup on server before uploading
 - Source: `.\ha_custom_component\`
-- Destination: `root@kube1.local:/home/master/homeassistant/custom_components/iaqualink`
+- Destination: `master@dell7050:/home/master/homeassistant/custom_components/iaqualink`
 
 ## Status: ✅ UPLOADED
 
 The updated integration has been successfully uploaded to your server at:
-`root@kube1.local:/home/master/homeassistant/custom_components/iaqualink`
+`master@dell7050:/home/master/homeassistant/custom_components/iaqualink`
 
 ## Next Steps
 
 1. **Restart Home Assistant:**
    ```bash
-   ssh root@kube1.local 'docker restart homeassistant'
+   ssh master@dell7050 'docker restart homeassistant'
    ```
    Or use: Developer Tools → Restart in Home Assistant UI
 
@@ -156,7 +156,7 @@ A backup of your original integration was created on the server at:
 
 If you need to rollback:
 ```bash
-ssh root@kube1.local
+ssh master@dell7050
 cd /home/master/homeassistant/custom_components
 rm -rf iaqualink
 cp -r iaqualink.backup.YYYYMMDD_HHMMSS iaqualink

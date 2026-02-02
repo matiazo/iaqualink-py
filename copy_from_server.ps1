@@ -1,7 +1,7 @@
 # Copy Home Assistant iaqualink custom integration from server
 # Usage: .\copy_from_server.ps1
 
-$SERVER = "master@kube1.local"
+$SERVER = "master@dell7050"
 $REMOTE_PATH = "/home/master/homeassistant/custom_components/iaqualink"
 $LOCAL_PATH = ".\ha_custom_component"
 
