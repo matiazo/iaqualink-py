@@ -562,22 +562,35 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
     async def turn_on(self) -> None:
         if not self.is_on:
             LOGGER.debug(f"Turning on ICL light zone {self.zone_id}")
+
+            # Optimistic update for immediate UI feedback.
+            self.data["zoneStatus"] = "on"
+
             # Use onoff_iclzone command from GitHub issue #39
             data = {"zoneId": str(self.zone_id), "on_off_action": "on"}
             try:
                 await self.system.set_icl_light(data)
             except Exception as e:
+                # Roll back optimistic update on failure.
+                self.data["zoneStatus"] = "off"
                 LOGGER.error(f"Failed to turn on ICL light: {e}", exc_info=True)
                 raise
 
     async def turn_off(self) -> None:
         if self.is_on:
             LOGGER.debug(f"Turning off ICL light zone {self.zone_id}")
+
+            # Optimistic update for immediate UI feedback.
+            self.data["zoneStatus"] = "off"
+            self.data["zoneColorVal"] = "off"
+
             # Use onoff_iclzone command from GitHub issue #39
             data = {"zoneId": str(self.zone_id), "on_off_action": "off"}
             try:
                 await self.system.set_icl_light(data)
             except Exception as e:
+                # Best-effort rollback.
+                self.data["zoneStatus"] = "on"
                 LOGGER.error(f"Failed to turn off ICL light: {e}", exc_info=True)
                 raise
 
@@ -586,24 +599,45 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
             msg = f"{brightness}% isn't a valid brightness level (0-100)."
             raise AqualinkInvalidParameterException(msg)
 
+        # Brightness changes imply the light should be on.
+        if not self.is_on and brightness > 0:
+            await self.turn_on()
+
+        # Optimistic update.
+        self.data["dim_level"] = str(brightness)
+
         # According to GitHub issue #39, brightness is only supported with preset colors
         # via set_iclzone_color command. Custom colors don't support brightness dimming.
         # We'll use a white preset color (color_id=1 is typically white)
         data = {
-            "zoneId": str(self.zone_id), 
-            "color_id": "1",  # Use preset white color which supports dimming
-            "dim_level": str(brightness)
+            "zoneId": str(self.zone_id),
+            "color_id": "1",  # preset white
+            "dim_level": str(brightness),
         }
         await self.system.set_icl_light(data)
 
-    async def set_rgb_color(self, red: int, green: int, blue: int, white: int | None = None) -> None:
+    async def set_rgb_color(
+        self, red: int, green: int, blue: int, white: int | None = None
+    ) -> None:
         if not all(0 <= val <= 255 for val in [red, green, blue]):
             msg = "RGB values must be between 0 and 255."
             raise AqualinkInvalidParameterException(msg)
 
-        # Use define_iclzone_customcolor command from GitHub issue #39
-        # Use provided white value or keep current white value
+        # Setting color implies the light should be on.
+        if not self.is_on:
+            await self.turn_on()
+
+        # Use provided white value or keep current white value.
         white_val = white if white is not None else (self.white_value or 0)
+
+        # Optimistic update.
+        self.data["red_val"] = str(red)
+        self.data["green_val"] = str(green)
+        self.data["blue_val"] = str(blue)
+        self.data["white_val"] = str(white_val)
+        self.data["zoneColorVal"] = "custom"
+
+        # Use define_iclzone_customcolor command from GitHub issue #39
         data = {
             "zoneId": str(self.zone_id),
             "red_val": str(red),
@@ -618,6 +652,12 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
             msg = "White value must be between 0 and 255."
             raise AqualinkInvalidParameterException(msg)
 
+        if not self.is_on and white > 0:
+            await self.turn_on()
+
+        # Optimistic update.
+        self.data["white_val"] = str(white)
+
         # Set white value with current RGB values
         rgb = self.rgb_color or (255, 255, 255)
         data = {
@@ -625,7 +665,7 @@ class IaquaICLLight(IaquaDevice, AqualinkLight):
             "red_val": str(rgb[0]),
             "green_val": str(rgb[1]),
             "blue_val": str(rgb[2]),
-            "white_val": str(white)
+            "white_val": str(white),
         }
         await self.system.set_icl_light(data)
 

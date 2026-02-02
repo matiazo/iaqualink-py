@@ -117,19 +117,32 @@ class IaquaSystem(AqualinkSystem):
         r = await self._send_session_request(command, params)
         LOGGER.debug(f"ICL light response status: {r.status_code}")
         
-        # Parse response to update device states
+        # Parse response to update device states. The ICL endpoints often return
+        # an empty JSON payload even when the command succeeds, which would leave
+        # the library state stale until the next polling cycle. For responsiveness
+        # (e.g. Home Assistant UI), follow up with a home_screen refresh when we
+        # can't parse an updated state from the command response.
         response_data = r.json()
-        if not response_data:
-            LOGGER.debug("ICL light command returned empty response - command completed")
-            return
-        elif "home_screen" in response_data:
-            LOGGER.debug("Parsing home_screen response")
-            self._parse_home_response(r)
-        elif "devices_screen" in response_data:
-            LOGGER.debug("Parsing devices_screen response")
-            self._parse_devices_response(r)
-        else:
-            LOGGER.debug(f"Unexpected ICL response format: {response_data}")
+        parsed = False
+
+        if response_data and isinstance(response_data, dict):
+            if "home_screen" in response_data:
+                LOGGER.debug("Parsing home_screen response")
+                self._parse_home_response(r)
+                parsed = True
+            elif "devices_screen" in response_data:
+                LOGGER.debug("Parsing devices_screen response")
+                self._parse_devices_response(r)
+                parsed = True
+            else:
+                LOGGER.debug(f"Unexpected ICL response format: {response_data}")
+
+        if not parsed:
+            LOGGER.debug(
+                "ICL command response contained no usable state; refreshing home_screen"
+            )
+            r_home = await self._send_home_screen_request()
+            self._parse_home_response(r_home)
 
     async def _send_home_screen_request(self) -> httpx.Response:
         return await self._send_session_request(IAQUA_COMMAND_GET_HOME)
