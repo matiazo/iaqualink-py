@@ -79,6 +79,61 @@ The updated integration has been successfully uploaded to your server at:
 
 ## Troubleshooting
 
+### ⚠️ CRITICAL: Installing Custom Python Packages in Home Assistant
+
+**RULE OF THUMB: ALWAYS use `--no-deps` when installing ANY custom Python package in Home Assistant.**
+
+Home Assistant has carefully pinned dependency versions. Installing packages without `--no-deps` can upgrade core dependencies and break HA entirely.
+
+```bash
+# ✅ CORRECT - Always use --no-deps
+docker exec home-assistant pip install --no-deps "git+https://github.com/user/repo.git@branch"
+docker exec home-assistant pip install --no-deps some-package
+
+# ❌ WRONG - May break Home Assistant
+docker exec home-assistant pip install "git+https://github.com/user/repo.git@branch"
+docker exec home-assistant pip install some-package
+```
+
+**After installing, verify critical packages weren't changed**:
+```bash
+docker exec home-assistant pip show pycares aiodns aiohttp
+# pycares should be 4.11.0, aiodns should be 3.5.0
+```
+
+---
+
+### Home Assistant Crash Loop (pycares error)
+
+If Home Assistant enters a restart loop with this error:
+```
+AttributeError: module 'pycares' has no attribute 'ares_query_a_result'
+```
+
+**Cause**: A package was installed WITHOUT `--no-deps`, which upgraded `pycares` from 4.11.0 to 5.0.1 (incompatible with HA).
+
+**Fix**:
+```bash
+# Option 1: If container is crashing too fast to exec into
+ssh master@dell7050 'docker rm -f home-assistant && docker run -d --name home-assistant --restart=unless-stopped -v /home/master/homeassistant:/config -v /etc/localtime:/etc/localtime:ro --network=host ghcr.io/home-assistant/home-assistant:2025.9.3'
+
+# Wait for container to start, then reinstall iaqualink properly
+ssh master@dell7050 'docker exec home-assistant pip install --no-deps "git+https://github.com/matiazo/iaqualink-py.git@master"'
+
+# Fix pycares (build deps may still upgrade it)
+ssh master@dell7050 'docker exec home-assistant pip install pycares==4.11.0'
+
+# Restart
+ssh master@dell7050 'docker restart home-assistant'
+```
+
+**Option 2: If container can be exec'd into**:
+```bash
+ssh master@dell7050 'docker exec home-assistant pip install aiodns==3.5.0 pycares==4.11.0 && docker restart home-assistant'
+```
+
+---
+
 ### Color picker not showing after restart
 
 1. **Check logs:**
