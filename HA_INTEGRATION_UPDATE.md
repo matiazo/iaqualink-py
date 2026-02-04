@@ -79,6 +79,36 @@ The updated integration has been successfully uploaded to your server at:
 
 ## Troubleshooting
 
+### ⚠️ CRITICAL: manifest.json Must Use Pinned Commit Hash
+
+**The `manifest.json` requirements MUST use a pinned commit hash, NOT a branch name like `@master`.**
+
+Home Assistant reads `manifest.json` on every startup and automatically installs requirements. If you use `@master`:
+1. HA can't cache the package (moving target)
+2. HA runs `pip install` on every restart
+3. This triggers full dependency resolution, which upgrades `pycares` from 4.11.0 → 5.0.1
+4. HA crashes with `AttributeError: module 'pycares' has no attribute 'ares_query_a_result'`
+
+```json
+// ✅ CORRECT - Pinned commit hash (cacheable, stable)
+"requirements": ["iaqualink@git+https://github.com/matiazo/iaqualink-py.git@68f199e5b2808c88f32110adf24facb426d86e5c"]
+
+// ❌ WRONG - Branch name (re-fetches on every restart, breaks dependencies)
+"requirements": ["iaqualink@git+https://github.com/matiazo/iaqualink-py.git@master"]
+```
+
+**To get the current commit hash:**
+```bash
+git rev-parse HEAD
+```
+
+**After updating manifest.json**, you must:
+1. Upload to server: `scp ha_custom_component/manifest.json master@dell7050:/home/master/homeassistant/custom_components/iaqualink/`
+2. Recreate container with fresh packages (see fix below)
+3. Manually install the forked iaqualink with `--no-deps`
+
+---
+
 ### ⚠️ CRITICAL: Installing Custom Python Packages in Home Assistant
 
 **RULE OF THUMB: ALWAYS use `--no-deps` when installing ANY custom Python package in Home Assistant.**
@@ -87,11 +117,11 @@ Home Assistant has carefully pinned dependency versions. Installing packages wit
 
 ```bash
 # ✅ CORRECT - Always use --no-deps
-docker exec home-assistant pip install --no-deps "git+https://github.com/user/repo.git@branch"
+docker exec home-assistant pip install --no-deps "git+https://github.com/user/repo.git@COMMIT_HASH"
 docker exec home-assistant pip install --no-deps some-package
 
 # ❌ WRONG - May break Home Assistant
-docker exec home-assistant pip install "git+https://github.com/user/repo.git@branch"
+docker exec home-assistant pip install "git+https://github.com/user/repo.git@master"
 docker exec home-assistant pip install some-package
 ```
 
@@ -110,28 +140,33 @@ If Home Assistant enters a restart loop with this error:
 AttributeError: module 'pycares' has no attribute 'ares_query_a_result'
 ```
 
-**Cause**: A package was installed WITHOUT `--no-deps`, which upgraded `pycares` from 4.11.0 to 5.0.1 (incompatible with HA).
+**Cause**: A package was installed WITHOUT `--no-deps`, OR `manifest.json` uses `@master` instead of a pinned commit hash.
 
 **Fix**:
 ```bash
-# Option 1: If container is crashing too fast to exec into
-ssh master@dell7050 'docker rm -f home-assistant && docker run -d --name home-assistant --restart=unless-stopped -v /home/master/homeassistant:/config -v /etc/localtime:/etc/localtime:ro --network=host ghcr.io/home-assistant/home-assistant:2025.9.3'
+# Step 1: Remove broken container
+ssh master@dell7050 'docker rm -f home-assistant'
 
-# Wait for container to start, then reinstall iaqualink properly
-ssh master@dell7050 'docker exec home-assistant pip install --no-deps "git+https://github.com/matiazo/iaqualink-py.git@master"'
+# Step 2: Fix manifest.json locally (change @master to @COMMIT_HASH)
+# Then upload:
+scp ha_custom_component/manifest.json master@dell7050:/home/master/homeassistant/custom_components/iaqualink/
 
-# Fix pycares (build deps may still upgrade it)
+# Step 3: Create fresh container
+ssh master@dell7050 'docker run -d --name home-assistant --restart=unless-stopped -v /home/master/homeassistant:/config -v /etc/localtime:/etc/localtime:ro -v /home/master/sun-plant-simulator:/sun-plant-simulator:ro --network=host ghcr.io/home-assistant/home-assistant:2025.9.3'
+
+# Step 4: Wait for container to start, then install forked iaqualink properly
+ssh master@dell7050 'docker exec home-assistant pip install --no-deps "git+https://github.com/matiazo/iaqualink-py.git@68f199e5b2808c88f32110adf24facb426d86e5c"'
+
+# Step 5: Fix pycares (build deps may still upgrade it)
 ssh master@dell7050 'docker exec home-assistant pip install pycares==4.11.0'
 
-# Restart
+# Step 6: Restart
 ssh master@dell7050 'docker restart home-assistant'
 ```
 
-**Option 2: If container can be exec'd into**:
+**Option 2: If container can be exec'd into (not crash looping)**:
 ```bash
 ssh master@dell7050 'docker exec home-assistant pip install aiodns==3.5.0 pycares==4.11.0 && docker restart home-assistant'
-```
-
 ---
 
 ### Color picker not showing after restart

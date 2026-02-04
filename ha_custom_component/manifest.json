@@ -3,10 +3,10 @@
   "name": "Jandy iAqualink",
   "codeowners": ["@matiazo"],
   "config_flow": true,
-  "version": "0.0.4",
+  "version": "0.0.5",
   "documentation": "https://www.home-assistant.io/integrations/iaqualink",
   "iot_class": "cloud_polling",
   "loggers": ["iaqualink"],
-  "requirements": ["iaqualink@git+https://github.com/matiazo/iaqualink-py.git@master", "h2==4.3.0"],
+  "requirements": ["iaqualink@git+https://github.com/matiazo/iaqualink-py.git@68f199e5b2808c88f32110adf24facb426d86e5c", "h2==4.3.0"],
   "single_config_entry": true
 }
